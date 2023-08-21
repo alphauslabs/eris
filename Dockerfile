@@ -8,4 +8,4 @@ RUN set -x && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -
 WORKDIR /jupiter/
 COPY --from=0 /go/src/github.com/alphauslabs/jupiter/jupiter .
 ENTRYPOINT ["/jupiter/jupiter"]
-CMD ["-lostostderr"]
+CMD ["-logtostderr"]
