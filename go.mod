@@ -7,6 +7,7 @@ require (
 	github.com/cespare/xxhash v1.1.0
 	github.com/golang/glog v1.1.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
+	github.com/tidwall/redcon v1.6.2
 	golang.org/x/oauth2 v0.10.0
 	google.golang.org/grpc v1.57.0
 	google.golang.org/protobuf v1.31.0
@@ -16,6 +17,8 @@ require (
 	cloud.google.com/go/compute v1.20.1 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/tidwall/btree v1.1.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
 	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/sys v0.10.0 // indirect
 	golang.org/x/text v0.11.0 // indirect

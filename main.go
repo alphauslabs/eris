@@ -20,6 +20,7 @@ import (
 	"github.com/cespare/xxhash"
 	"github.com/golang/glog"
 	"github.com/grpc-ecosystem/go-grpc-middleware/ratelimit"
+	"github.com/tidwall/redcon"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/grpc"
 )
@@ -227,6 +228,25 @@ func main() {
 		}
 	}()
 
+	addr := ":6379"
+	rc := redcon.NewServer(addr, handler,
+		func(conn redcon.Conn) bool {
+			glog.Infof("accept: %s", conn.RemoteAddr())
+			return true
+		},
+		func(conn redcon.Conn, err error) {
+			glog.Infof("closed: %s, err: %v", conn.RemoteAddr(), err)
+		},
+	)
+
+	go func() {
+		glog.Infof("start redis proxy at %s", addr)
+		err := rc.ListenAndServe()
+		if err != nil {
+			glog.Fatal(err)
+		}
+	}()
+
 	// Interrupt handler.
 	go func() {
 		sigch := make(chan os.Signal)
@@ -236,4 +256,6 @@ func main() {
 	}()
 
 	<-done
+
+	rc.Close()
 }
