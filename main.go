@@ -23,7 +23,8 @@ import (
 )
 
 var (
-	paramTest = flag.Bool("test", false, "Scratch pad, anything")
+	paramTest    = flag.Bool("test", false, "Scratch pad, anything")
+	paramMembers = flag.String("members", "", "Initial Redis members, comma-separated, fmt: host:port")
 )
 
 func test() {
@@ -189,12 +190,11 @@ func run(ctx context.Context, network, port string, done chan error) error {
 }
 
 func main() {
+	flag.Parse()
 	defer func(begin time.Time) {
 		slog.Info("end;", "duration", time.Since(begin))
+		glog.Flush()
 	}(time.Now())
-
-	flag.Parse()
-	defer glog.Flush()
 
 	if *paramTest {
 		test()
