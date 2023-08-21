@@ -18,8 +18,10 @@ import (
 )
 
 var (
-	paramTest    = flag.Bool("test", false, "Scratch pad, anything")
-	paramMembers = flag.String("members", "", "Initial Redis members, comma-separated, fmt: host:port")
+	paramTest              = flag.Bool("test", false, "Scratch pad, anything")
+	paramMembers           = flag.String("members", "", "Initial Redis members, comma-separated, fmt: [passwd@]host:port")
+	paramPartitions        = flag.Int("partitions", 27_103, "Partition count for our consistent hashring")
+	paramReplicationFactor = flag.Int("replication-factor", 10, "Replication factor for our consistent hashring")
 )
 
 func run(ctx context.Context, network, port string, done chan error) error {

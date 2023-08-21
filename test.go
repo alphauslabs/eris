@@ -19,17 +19,17 @@ func test() {
 	// Modify PartitionCount, ReplicationFactor and Load to increase or decrease
 	// relocation ratio.
 	cfg := consistent.Config{
-		PartitionCount:    27_103,
-		ReplicationFactor: 10,
+		PartitionCount:    *paramPartitions,
+		ReplicationFactor: *paramReplicationFactor,
 		Hasher:            hasher{},
 	}
 
 	c := consistent.New(members, cfg)
 
 	addMember(c, cfg)
-	checkLoad(c, cfg)
+	// checkLoad(c, cfg)
 	delMember(c, cfg)
-	checkLoad(c, cfg)
+	// checkLoad(c, cfg)
 	testKey(c)
 }
 
@@ -38,14 +38,12 @@ func testKey(c *consistent.Consistent) {
 		slog.Info("testKey;", "duration", time.Since(begin))
 	}(time.Now())
 
-	m := c.LocateKey([]byte("sample/key"))
-	slog.Info("locate;", "member", m.String())
-
-	mn, err := c.GetClosestN([]byte("sample/key"), 1)
-	if err != nil {
-		slog.Error("GetClosestN failed;", "err", err)
-	} else {
-		slog.Info("closest;", "member", mn)
+	for i := 0; i < 100_000_000; i++ {
+		k := fmt.Sprintf("sample/key%04d", i)
+		m := c.LocateKey([]byte(k))
+		// pk := c.FindPartitionID([]byte(k))
+		// slog.Info("locate;", "member", m.String(), "key", k, "part", pk)
+		_ = m
 	}
 }
 
