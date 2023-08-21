@@ -78,13 +78,8 @@ func main() {
 
 	addr := ":6379"
 	rc := redcon.NewServer(addr, handler,
-		func(conn redcon.Conn) bool {
-			glog.Infof("accept: %s", conn.RemoteAddr())
-			return true
-		},
-		func(conn redcon.Conn, err error) {
-			glog.Infof("closed: %s, err: %v", conn.RemoteAddr(), err)
-		},
+		func(conn redcon.Conn) bool { return true },
+		func(conn redcon.Conn, err error) {},
 	)
 
 	go func() {
