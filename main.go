@@ -1,14 +1,26 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
+	"flag"
 	"fmt"
 	"log/slog"
 	"math"
 	"math/rand"
+	"net"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
+	v1 "github.com/alphauslabs/jupiter/proto/v1"
 	"github.com/buraksezer/consistent"
 	"github.com/cespare/xxhash"
+	"github.com/golang/glog"
+	"github.com/grpc-ecosystem/go-grpc-middleware/ratelimit"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/grpc"
 )
 
 type Member string
@@ -125,29 +137,97 @@ func checkLoad(c *consistent.Consistent, cfg consistent.Config) {
 	}
 }
 
+func checkCreds(ctx context.Context) {
+	creds, err := google.FindDefaultCredentials(ctx)
+	if err != nil {
+		glog.Errorf("FindDefaultCredentials failed: %v", err)
+		return
+	}
+
+	b, _ := json.Marshal(creds)
+	glog.Infof("[dbg] creds: %v", string(b))
+}
+
+func run(ctx context.Context, network, port string, done chan error) error {
+	checkCreds(ctx)
+	l, err := net.Listen(network, ":"+port)
+	if err != nil {
+		glog.Errorf("net.Listen failed: %v", err)
+		return err
+	}
+
+	defer l.Close()
+
+	// Setup our grpc server.
+	gs := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			ratelimit.UnaryServerInterceptor(&limiter{}),
+		),
+		grpc.ChainStreamInterceptor(
+			ratelimit.StreamServerInterceptor(&limiter{}),
+		),
+	)
+
+	svc := &service{}
+	v1.RegisterJupiterServer(gs, svc)
+
+	go func() {
+		<-ctx.Done()
+		gs.GracefulStop()
+		done <- nil
+	}()
+
+	return gs.Serve(l)
+}
+
 func main() {
 	defer func(begin time.Time) {
 		slog.Info("end;", "duration", time.Since(begin))
 	}(time.Now())
 
-	members := []consistent.Member{}
-	for i := 0; i < 3; i++ {
-		member := Member(fmt.Sprintf("node%d", i))
-		members = append(members, member)
-	}
+	// members := []consistent.Member{}
+	// for i := 0; i < 3; i++ {
+	// 	member := Member(fmt.Sprintf("node%d", i))
+	// 	members = append(members, member)
+	// }
 
-	// Modify PartitionCount, ReplicationFactor and Load to increase or decrease
-	// relocation ratio.
-	cfg := consistent.Config{
-		PartitionCount:    27_103,
-		ReplicationFactor: 10,
-		Hasher:            hasher{},
-	}
-	c := consistent.New(members, cfg)
+	// // Modify PartitionCount, ReplicationFactor and Load to increase or decrease
+	// // relocation ratio.
+	// cfg := consistent.Config{
+	// 	PartitionCount:    27_103,
+	// 	ReplicationFactor: 10,
+	// 	Hasher:            hasher{},
+	// }
+	// c := consistent.New(members, cfg)
 
-	addMember(c, cfg)
-	checkLoad(c, cfg)
-	delMember(c, cfg)
-	checkLoad(c, cfg)
-	testKey(c)
+	// addMember(c, cfg)
+	// checkLoad(c, cfg)
+	// delMember(c, cfg)
+	// checkLoad(c, cfg)
+	// testKey(c)
+
+	// ----
+
+	flag.Parse()
+	defer glog.Flush()
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error)
+
+	go func() {
+		port := "8080"
+		glog.Infof("serving grpc at :%v", port)
+		if err := run(ctx, "tcp", port, done); err != nil {
+			glog.Fatal(err)
+		}
+	}()
+
+	// Interrupt handler.
+	go func() {
+		sigch := make(chan os.Signal)
+		signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
+		glog.Infof("signal: %v", <-sigch)
+		cancel()
+	}()
+
+	<-done
 }
