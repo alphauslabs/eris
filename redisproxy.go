@@ -54,6 +54,7 @@ func setCmd(conn redcon.Conn, cmd redcon.Command) {
 		conn.WriteError("ERR wrong number of arguments for '" + string(cmd.Args[0]) + "' command")
 		return
 	}
+
 	mu.Lock()
 	items[string(cmd.Args[1])] = cmd.Args[2]
 	mu.Unlock()
@@ -65,6 +66,7 @@ func getCmd(conn redcon.Conn, cmd redcon.Command) {
 		conn.WriteError("ERR wrong number of arguments for '" + string(cmd.Args[0]) + "' command")
 		return
 	}
+
 	mu.RLock()
 	val, ok := items[string(cmd.Args[1])]
 	mu.RUnlock()
@@ -80,6 +82,7 @@ func delCmd(conn redcon.Conn, cmd redcon.Command) {
 		conn.WriteError("ERR wrong number of arguments for '" + string(cmd.Args[0]) + "' command")
 		return
 	}
+
 	mu.Lock()
 	_, ok := items[string(cmd.Args[1])]
 	delete(items, string(cmd.Args[1]))
