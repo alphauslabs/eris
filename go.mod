@@ -5,7 +5,7 @@ go 1.21.0
 require (
 	github.com/buraksezer/consistent v0.10.0
 	github.com/cespare/xxhash v1.1.0
-	github.com/golang/glog v1.1.0
+	github.com/golang/glog v1.1.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/tidwall/redcon v1.6.2
 	google.golang.org/grpc v1.57.0
