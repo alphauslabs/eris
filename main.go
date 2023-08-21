@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"math/rand"
 	"net"
 	"os"
 	"os/signal"
@@ -26,10 +25,6 @@ import (
 var (
 	paramTest = flag.Bool("test", false, "Scratch pad, anything")
 )
-
-func init() {
-	rand.Seed(time.Now().UTC().UnixNano())
-}
 
 func test() {
 	members := []consistent.Member{}
@@ -140,7 +135,6 @@ func checkLoad(c *consistent.Consistent, cfg consistent.Config) {
 
 	for i := 0; i < keyCount; i++ {
 		key := fmt.Sprintf("key%v", i)
-		// rand.Read(key)
 		member := c.LocateKey([]byte(key))
 		distribution[member.String()]++
 	}
