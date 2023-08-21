@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"log/slog"
 	"net"
@@ -15,7 +14,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/grpc-ecosystem/go-grpc-middleware/ratelimit"
 	"github.com/tidwall/redcon"
-	"golang.org/x/oauth2/google"
 	"google.golang.org/grpc"
 )
 
@@ -24,19 +22,7 @@ var (
 	paramMembers = flag.String("members", "", "Initial Redis members, comma-separated, fmt: host:port")
 )
 
-func checkCreds(ctx context.Context) {
-	creds, err := google.FindDefaultCredentials(ctx)
-	if err != nil {
-		glog.Errorf("FindDefaultCredentials failed: %v", err)
-		return
-	}
-
-	b, _ := json.Marshal(creds)
-	glog.Infof("[dbg] creds: %v", string(b))
-}
-
 func run(ctx context.Context, network, port string, done chan error) error {
-	checkCreds(ctx)
 	l, err := net.Listen(network, ":"+port)
 	if err != nil {
 		glog.Errorf("net.Listen failed: %v", err)
