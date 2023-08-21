@@ -27,12 +27,6 @@ var (
 	paramTest = flag.Bool("test", false, "Scratch pad, anything")
 )
 
-type Member string
-
-func (m Member) String() string {
-	return string(m)
-}
-
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 }
