@@ -16,7 +16,6 @@ import (
 
 	v1 "github.com/alphauslabs/jupiter/proto/v1"
 	"github.com/buraksezer/consistent"
-	"github.com/cespare/xxhash"
 	"github.com/golang/glog"
 	"github.com/grpc-ecosystem/go-grpc-middleware/ratelimit"
 	"github.com/tidwall/redcon"
@@ -32,12 +31,6 @@ type Member string
 
 func (m Member) String() string {
 	return string(m)
-}
-
-type hasher struct{}
-
-func (h hasher) Sum64(data []byte) uint64 {
-	return xxhash.Sum64(data)
 }
 
 func init() {
