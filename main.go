@@ -14,7 +14,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/alphauslabs/jupiter/params"
 	v1 "github.com/alphauslabs/jupiter/proto/v1"
 	"github.com/buraksezer/consistent"
 	"github.com/cespare/xxhash"
@@ -23,6 +22,10 @@ import (
 	"github.com/tidwall/redcon"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/grpc"
+)
+
+var (
+	paramTest = flag.Bool("test", false, "Scratch pad, anything")
 )
 
 type Member string
@@ -212,7 +215,7 @@ func main() {
 	flag.Parse()
 	defer glog.Flush()
 
-	if *params.Test {
+	if *paramTest {
 		test()
 		return
 	}
