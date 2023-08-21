@@ -28,10 +28,6 @@ docker:
 	cp $(BASE)/cloudrun/jupiter/dockerfile.jupiter $(BASE)/
 	docker build -f dockerfile.jupiter --rm -t $(MODULE):$(CIRCLE_SHA1) --build-arg version="$(BLDVER)" .
 
-# cd $(BASE)/cloudrun/jupiter/tf/gcp/ && \
-# 	terraform init -input=true && \
-# 	terraform apply -auto-approve -var="project=$(PROJECT_ID)"
-#	cd $(BASE)/cloudrun/jupiter/tf/aws/ && terraform init -input=true && terraform apply -auto-approve
 deploy:
 	@chmod +x $(BASE)/cloudrun/jupiter/deploy.sh
 	NAME=$(MODULE) $(BASE)/cloudrun/jupiter/deploy.sh
