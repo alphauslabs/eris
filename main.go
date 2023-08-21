@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/alphauslabs/jupiter/params"
 	v1 "github.com/alphauslabs/jupiter/proto/v1"
 	"github.com/buraksezer/consistent"
 	"github.com/cespare/xxhash"
@@ -37,6 +38,30 @@ func (h hasher) Sum64(data []byte) uint64 {
 
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
+}
+
+func test() {
+	members := []consistent.Member{}
+	for i := 0; i < 3; i++ {
+		member := Member(fmt.Sprintf("node%d", i))
+		members = append(members, member)
+	}
+
+	// Modify PartitionCount, ReplicationFactor and Load to increase or decrease
+	// relocation ratio.
+	cfg := consistent.Config{
+		PartitionCount:    27_103,
+		ReplicationFactor: 10,
+		Hasher:            hasher{},
+	}
+
+	c := consistent.New(members, cfg)
+
+	addMember(c, cfg)
+	checkLoad(c, cfg)
+	delMember(c, cfg)
+	checkLoad(c, cfg)
+	testKey(c)
 }
 
 func testKey(c *consistent.Consistent) {
@@ -157,8 +182,6 @@ func run(ctx context.Context, network, port string, done chan error) error {
 	}
 
 	defer l.Close()
-
-	// Setup our grpc server.
 	gs := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			ratelimit.UnaryServerInterceptor(&limiter{}),
@@ -185,31 +208,14 @@ func main() {
 		slog.Info("end;", "duration", time.Since(begin))
 	}(time.Now())
 
-	// members := []consistent.Member{}
-	// for i := 0; i < 3; i++ {
-	// 	member := Member(fmt.Sprintf("node%d", i))
-	// 	members = append(members, member)
-	// }
-
-	// // Modify PartitionCount, ReplicationFactor and Load to increase or decrease
-	// // relocation ratio.
-	// cfg := consistent.Config{
-	// 	PartitionCount:    27_103,
-	// 	ReplicationFactor: 10,
-	// 	Hasher:            hasher{},
-	// }
-	// c := consistent.New(members, cfg)
-
-	// addMember(c, cfg)
-	// checkLoad(c, cfg)
-	// delMember(c, cfg)
-	// checkLoad(c, cfg)
-	// testKey(c)
-
-	// ----
-
 	flag.Parse()
 	defer glog.Flush()
+
+	if *params.Test {
+		test()
+		return
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error)
 
