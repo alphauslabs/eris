@@ -37,7 +37,7 @@ var (
 	leaderActive *timedoff.TimedOff // when active/on, we have a live leader in the group
 )
 
-func run(ctx context.Context, network, port string, done chan error) error {
+func grpcServe(ctx context.Context, network, port string, done chan error) error {
 	l, err := net.Listen(network, ":"+port)
 	if err != nil {
 		glog.Errorf("net.Listen failed: %v", err)
@@ -126,11 +126,13 @@ func main() {
 		}
 	}()
 
+	go leaderLiveness(cctx(ctx))
+
 	// Setup or gRPC management API.
 	go func() {
 		port := "8080"
 		glog.Infof("serving grpc at :%v", port)
-		if err := run(ctx, "tcp", port, done); err != nil {
+		if err := grpcServe(ctx, "tcp", port, done); err != nil {
 			glog.Fatal(err)
 		}
 	}()
@@ -149,8 +151,6 @@ func main() {
 			glog.Fatal(err)
 		}
 	}()
-
-	go leaderLiveness(cctx(ctx))
 
 	// Interrupt handler.
 	go func() {
