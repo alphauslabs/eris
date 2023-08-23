@@ -72,13 +72,7 @@ func sendToLeader(ctx context.Context, m []byte) ([]byte, error) {
 			done <- *e
 		}(&res, &err)
 
-		// Let's wait max 10mins by default. Ample time to ensure leader availability.
-		bo := gaxv2.Backoff{
-			Initial:    time.Second,
-			Max:        time.Minute, // maximum amount of time between retries
-			Multiplier: 2,
-		}
-
+		bo := gaxv2.Backoff{Max: time.Minute}
 		for i := 0; i < 10; i++ {
 			if !op.IsRunning() {
 				time.Sleep(bo.Pause())
