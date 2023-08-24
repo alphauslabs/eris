@@ -36,6 +36,8 @@ var (
 	op           *hedge.Op          // group coordinator
 	leaderActive *timedoff.TimedOff // when active/on, we have a live leader in the group
 	redisFleet   *fleet             // our main fleet of cache nodes
+
+	// f *os.File
 )
 
 func grpcServe(ctx context.Context, network, port string, done chan error) error {
@@ -163,6 +165,12 @@ func main() {
 			glog.Fatal(err)
 		}
 	}()
+
+	// f, err = os.Create("/tmp/cpuprofile")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// pprof.StartCPUProfile(f)
 
 	// Interrupt handler.
 	go func() {

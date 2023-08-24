@@ -107,6 +107,9 @@ func pingCmd(conn redcon.Conn, cmd redcon.Command, key string) {
 		glog.Infof("[pingCmd] direct reply")
 		conn.WriteString("PONG")
 	}
+
+	// pprof
+	// pprof.StopCPUProfile()
 }
 
 func quitCmd(conn redcon.Conn, cmd redcon.Command, key string) {
