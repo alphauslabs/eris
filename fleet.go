@@ -38,7 +38,7 @@ type member struct {
 }
 
 type fleet struct {
-	mtx        sync.Mutex
+	mtx        sync.RWMutex
 	members    map[string]*member
 	consistent *consistent.Consistent
 }
@@ -127,18 +127,15 @@ func (m *fleet) runner(id string, pool *redis.Pool, queue chan *rcmd, done *sync
 }
 
 func (m *fleet) do(key string, args [][]byte) (interface{}, error) {
-	// NOTE: This lock pair affects performance significantly. Need
-	// to figure out a way to safely perform without locks.
+	var node string
+	// cmd := []string{string(args[0])}
 
-	// m.mtx.Lock()
-	// defer m.mtx.Unlock()
-	cmd := []string{string(args[0])}
-	node := m.consistent.LocateKey([]byte(key))
+	node = m.consistent.LocateKey([]byte(key)).String()
 	nargs := []interface{}{}
 	if len(args) > 1 {
 		for i := 1; i < len(args); i++ {
 			nargs = append(nargs, args[i])
-			cmd = append(cmd, string(args[i]))
+			// cmd = append(cmd, string(args[i]))
 		}
 	}
 
@@ -148,9 +145,13 @@ func (m *fleet) do(key string, args [][]byte) (interface{}, error) {
 		done: make(chan error, 1),
 	}
 
-	m.members[node.String()].queue <- c
-	err := <-c.done // wait for reply
+	m.mtx.RLock()
+	m.members[node].queue <- c
+	m.mtx.RUnlock()
+	err := <-c.done
+
 	// glog.Infof("[do] runner=%v, key=%v, cmd=%v", c.runner, key, cmd)
+
 	return c.reply, err
 }
 
