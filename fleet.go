@@ -98,7 +98,7 @@ func (m *fleet) addMember(host string) {
 	}
 
 	if m.consistent == nil {
-		glog.Infof("init consistent with %v", host)
+		glog.Infof("init hashring with %v", host)
 		cm := cmember(host)
 		m.consistent = consistent.New(
 			[]consistent.Member{cm},
@@ -109,7 +109,7 @@ func (m *fleet) addMember(host string) {
 			},
 		)
 	} else {
-		glog.Infof("add %v to consistent", host)
+		glog.Infof("add %v to hashring", host)
 		m.consistent.Add(cmember(host))
 	}
 }
@@ -135,18 +135,18 @@ func (m *fleet) ping() error {
 		return fmt.Errorf("PING: something is wrong!")
 	}
 
-	glog.Infof("reply = %v", c.reply)
+	glog.Infof("reply=%v", c.reply)
 	return nil
 }
 
 func (m *fleet) worker(id string, pool *redis.Pool, queue chan *rcmd, done *sync.WaitGroup) {
 	defer func() { done.Done() }()
-	glog.Infof("worker %v started", id)
+	glog.Infof("runner %v started", id)
 	con := pool.Get()
 	defer con.Close()
 	for j := range queue {
 		j.runner = id
-		glog.Infof("[%v] do work for %v", id, j)
+		glog.Infof("[%v] do: %v", id, j)
 		out, err := con.Do(j.cmd, j.args...)
 		j.reply = out
 		j.done <- err
@@ -157,7 +157,7 @@ func (m *fleet) close() {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 	for k, v := range m.members {
-		glog.Infof("wait for %v to be done...", k)
+		glog.Infof("closing %v...", k)
 		close(v.queue)
 		v.done.Wait()
 		v.pool.Close()

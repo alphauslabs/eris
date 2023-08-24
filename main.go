@@ -36,6 +36,7 @@ var (
 	client       *spanner.Client    // spanner client
 	op           *hedge.Op          // group coordinator
 	leaderActive *timedoff.TimedOff // when active/on, we have a live leader in the group
+	redisFleet   *fleet             // our main fleet of cache nodes
 )
 
 func grpcServe(ctx context.Context, network, port string, done chan error) error {
@@ -130,7 +131,7 @@ func main() {
 	go leaderLiveness(cctx(ctx))
 
 	// Setup our fleet of Redis nodes.
-	redisFleet := newFleet()
+	redisFleet = newFleet()
 	defer redisFleet.close()
 	for _, m := range strings.Split(*paramMembers, ",") {
 		redisFleet.addMember(m)
