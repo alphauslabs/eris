@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -127,6 +128,15 @@ func main() {
 	}()
 
 	go leaderLiveness(cctx(ctx))
+
+	// Setup our fleet of Redis nodes.
+	redisFleet := newFleet()
+	defer redisFleet.close()
+	for _, m := range strings.Split(*paramMembers, ",") {
+		redisFleet.addMember(m)
+	}
+
+	redisFleet.test()
 
 	// Setup our gRPC management API.
 	go func() {

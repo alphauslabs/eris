@@ -10,6 +10,7 @@ require (
 	github.com/flowerinthenight/hedge v1.10.10
 	github.com/flowerinthenight/timedoff v1.0.1
 	github.com/golang/glog v1.1.2
+	github.com/gomodule/redigo v1.8.9
 	github.com/google/uuid v1.3.1
 	github.com/googleapis/gax-go/v2 v2.12.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0

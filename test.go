@@ -9,11 +9,15 @@ import (
 	"github.com/buraksezer/consistent"
 )
 
+type lmember string
+
+func (m lmember) String() string { return string(m) }
+
 func test() {
 	members := []consistent.Member{}
 	for i := 0; i < 3; i++ {
-		member := Member(fmt.Sprintf("node%d", i))
-		members = append(members, member)
+		m := lmember(fmt.Sprintf("node%d", i))
+		members = append(members, m)
 	}
 
 	// Modify PartitionCount, ReplicationFactor and Load to increase or decrease
@@ -59,7 +63,7 @@ func addMember(c *consistent.Consistent, cfg consistent.Config) {
 	}
 
 	// Add a new member
-	c.Add(Member(fmt.Sprintf("node%d", 3)))
+	c.Add(lmember(fmt.Sprintf("node%d", 3)))
 
 	// Get the new layout and compare with the previous
 	var changed int
