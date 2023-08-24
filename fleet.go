@@ -115,28 +115,8 @@ func (m *fleet) addMember(host string) {
 }
 
 func (m *fleet) ping() error {
-	m.mtx.Lock()
-	defer m.mtx.Unlock()
-	key := "locate/ping"
-	node := m.consistent.LocateKey([]byte(key))
-	c := &rcmd{
-		cmd:  "PING",
-		args: []interface{}{},
-		done: make(chan error, 1),
-	}
-
-	m.members[node.String()].queue <- c
-	err := <-c.done // wait for reply
-	if err != nil {
-		return err
-	}
-
-	if c.reply.(string) != "PONG" {
-		return fmt.Errorf("PING: something is wrong!")
-	}
-
-	glog.Infof("reply=%v", c.reply)
-	return nil
+	_, err := m.do("locate/ping", [][]byte{[]byte("PING")})
+	return err
 }
 
 func (m *fleet) worker(id string, pool *redis.Pool, queue chan *rcmd, done *sync.WaitGroup) {
@@ -146,11 +126,36 @@ func (m *fleet) worker(id string, pool *redis.Pool, queue chan *rcmd, done *sync
 	defer con.Close()
 	for j := range queue {
 		j.runner = id
-		glog.Infof("[%v] do: %v", id, j)
 		out, err := con.Do(j.cmd, j.args...)
 		j.reply = out
 		j.done <- err
 	}
+}
+
+func (m *fleet) do(key string, args [][]byte) (interface{}, error) {
+	defer func(begin time.Time) { glog.Infof("[do] took %v", time.Since(begin)) }(time.Now())
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	cmd := []string{string(args[0])}
+	node := m.consistent.LocateKey([]byte(key))
+	nargs := []interface{}{}
+	if len(args) > 1 {
+		for i := 1; i < len(args); i++ {
+			nargs = append(nargs, args[i])
+			cmd = append(cmd, string(args[i]))
+		}
+	}
+
+	c := &rcmd{
+		cmd:  string(args[0]),
+		args: nargs,
+		done: make(chan error, 1),
+	}
+
+	m.members[node.String()].queue <- c
+	err := <-c.done // wait for reply
+	glog.Infof("[do] runner=%v, key=%v, cmd=%v", c.runner, key, cmd)
+	return c.reply, err
 }
 
 func (m *fleet) close() {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log/slog"
 	"net"
 	"os"
 	"os/signal"
@@ -70,11 +69,9 @@ func grpcServe(ctx context.Context, network, port string, done chan error) error
 
 func main() {
 	flag.Parse()
-	defer func(begin time.Time) {
-		slog.Info("end;", "duration", time.Since(begin))
-		glog.Flush()
-	}(time.Now())
+	defer glog.Flush()
 
+	// Test:
 	if *paramTest {
 		test()
 		return

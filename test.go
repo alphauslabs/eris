@@ -14,6 +14,13 @@ type lmember string
 func (m lmember) String() string { return string(m) }
 
 func test() {
+	if true {
+		ss := []string{"one", "two", "three"}
+		v := fmt.Sprintf("%v", ss[:len(ss)-1])
+		slog.Info(v)
+		return
+	}
+
 	members := []consistent.Member{}
 	for i := 0; i < 3; i++ {
 		m := lmember(fmt.Sprintf("node%d", i))
