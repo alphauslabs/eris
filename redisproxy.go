@@ -104,7 +104,6 @@ func pingCmd(conn redcon.Conn, cmd redcon.Command, key string) {
 			conn.WriteAny(v)
 		}
 	default:
-		glog.Infof("[pingCmd] direct reply")
 		conn.WriteString("PONG")
 	}
 
