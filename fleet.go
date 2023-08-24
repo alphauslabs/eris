@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -45,23 +43,23 @@ type fleet struct {
 	consistent *consistent.Consistent
 }
 
-func (m *fleet) getMembers() map[string]struct{} {
-	m.mtx.Lock()
-	copy := make(map[string]struct{})
-	for k := range m.members {
-		copy[k] = struct{}{}
-	}
+// func (m *fleet) getMembers() map[string]struct{} {
+// 	m.mtx.Lock()
+// 	copy := make(map[string]struct{})
+// 	for k := range m.members {
+// 		copy[k] = struct{}{}
+// 	}
 
-	m.mtx.Unlock()
-	return copy
-}
+// 	m.mtx.Unlock()
+// 	return copy
+// }
 
-func (m *fleet) encodeMembers() string {
-	m.mtx.Lock()
-	defer m.mtx.Unlock()
-	b, _ := json.Marshal(m.members)
-	return base64.StdEncoding.EncodeToString(b)
-}
+// func (m *fleet) encodeMembers() string {
+// 	m.mtx.Lock()
+// 	defer m.mtx.Unlock()
+// 	b, _ := json.Marshal(m.members)
+// 	return base64.StdEncoding.EncodeToString(b)
+// }
 
 // func (m *membersT) setMembers(v map[string]string) {
 // 	m.mtx.Lock()
@@ -89,7 +87,7 @@ func (m *fleet) addMember(host string) {
 		for i := 0; i < maxActive; i++ {
 			id := fmt.Sprintf("%v/%04d", host, i)
 			m.members[host].done.Add(1)
-			go m.worker(
+			go m.runner(
 				id,
 				m.members[host].pool,
 				m.members[host].queue,
@@ -115,7 +113,7 @@ func (m *fleet) addMember(host string) {
 	}
 }
 
-func (m *fleet) worker(id string, pool *redis.Pool, queue chan *rcmd, done *sync.WaitGroup) {
+func (m *fleet) runner(id string, pool *redis.Pool, queue chan *rcmd, done *sync.WaitGroup) {
 	defer func() { done.Done() }()
 	glog.Infof("runner %v started", id)
 	con := pool.Get()
@@ -129,8 +127,11 @@ func (m *fleet) worker(id string, pool *redis.Pool, queue chan *rcmd, done *sync
 }
 
 func (m *fleet) do(key string, args [][]byte) (interface{}, error) {
-	m.mtx.Lock()
-	defer m.mtx.Unlock()
+	// NOTE: This lock pair affects performance significantly. Need
+	// to figure out a way to safely perform without locks.
+
+	// m.mtx.Lock()
+	// defer m.mtx.Unlock()
 	cmd := []string{string(args[0])}
 	node := m.consistent.LocateKey([]byte(key))
 	nargs := []interface{}{}
@@ -149,7 +150,7 @@ func (m *fleet) do(key string, args [][]byte) (interface{}, error) {
 
 	m.members[node.String()].queue <- c
 	err := <-c.done // wait for reply
-	glog.Infof("[do] runner=%v, key=%v, cmd=%v", c.runner, key, cmd)
+	// glog.Infof("[do] runner=%v, key=%v, cmd=%v", c.runner, key, cmd)
 	return c.reply, err
 }
 

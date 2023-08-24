@@ -2,11 +2,9 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/uuid"
@@ -35,10 +33,6 @@ var (
 //
 // If this custom args is not provided, args[1] will be used
 func handler(conn redcon.Conn, cmd redcon.Command) {
-	defer func(begin time.Time) {
-		glog.Infof("[handler] took %v", time.Since(begin))
-	}(time.Now())
-
 	ncmd := cmd
 	var key string
 	if len(ncmd.Args) >= 2 {
@@ -92,7 +86,7 @@ func handler(conn redcon.Conn, cmd redcon.Command) {
 
 func detachCmd(conn redcon.Conn, cmd redcon.Command, key string) {
 	hconn := conn.Detach()
-	log.Printf("connection has been detached")
+	glog.Info("connection has been detached")
 	go func() {
 		defer hconn.Close()
 		hconn.WriteString("OK")
