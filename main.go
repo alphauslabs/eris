@@ -128,7 +128,7 @@ func main() {
 
 	go leaderLiveness(cctx(ctx))
 
-	// Setup or gRPC management API.
+	// Setup our gRPC management API.
 	go func() {
 		port := "8080"
 		glog.Infof("serving grpc at :%v", port)
