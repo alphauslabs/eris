@@ -22,10 +22,11 @@ type cmember string
 func (m cmember) String() string { return string(m) }
 
 type rcmd struct {
-	cmd   string
-	args  []interface{}
-	done  chan error
-	reply interface{}
+	cmd    string
+	args   []interface{}
+	runner string
+	done   chan error
+	reply  interface{}
 }
 
 func (rc *rcmd) String() string { return fmt.Sprintf("%v %v", rc.cmd, rc.args) }
@@ -113,45 +114,42 @@ func (m *fleet) addMember(host string) {
 	}
 }
 
-func (m *fleet) test() {
+func (m *fleet) ping() error {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
-	key := "sample/key"
+	key := "locate/ping"
 	node := m.consistent.LocateKey([]byte(key))
-	glog.Infof("test: locate %q = %v", key, node)
-
-	// Should be error:
-	con := m.members[node.String()].pool.Get()
-	defer con.Close()
-	_, err := con.Do("GET", "hello")
-	if err != nil {
-		glog.Errorf("GET failed: %v", err)
-	}
-
 	c := &rcmd{
-		cmd:  "GET",
-		args: []interface{}{"hello"},
+		cmd:  "PING",
+		args: []interface{}{},
 		done: make(chan error, 1),
 	}
 
 	m.members[node.String()].queue <- c
-	<-c.done // wait for reply
+	err := <-c.done // wait for reply
+	if err != nil {
+		return err
+	}
+
+	if c.reply.(string) != "PONG" {
+		return fmt.Errorf("PING: something is wrong!")
+	}
+
 	glog.Infof("reply = %v", c.reply)
+	return nil
 }
 
 func (m *fleet) worker(id string, pool *redis.Pool, queue chan *rcmd, done *sync.WaitGroup) {
-	defer func() {
-		glog.Infof("worker %v stopped", id)
-		done.Done()
-	}()
-
+	defer func() { done.Done() }()
 	glog.Infof("worker %v started", id)
 	con := pool.Get()
 	defer con.Close()
 	for j := range queue {
+		j.runner = id
 		glog.Infof("[%v] do work for %v", id, j)
-		j.reply = fmt.Sprintf("reply from %v", id)
-		j.done <- nil
+		out, err := con.Do(j.cmd, j.args...)
+		j.reply = out
+		j.done <- err
 	}
 }
 

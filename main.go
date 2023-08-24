@@ -136,7 +136,11 @@ func main() {
 		redisFleet.addMember(m)
 	}
 
-	redisFleet.test()
+	// Test random ping.
+	err = redisFleet.ping()
+	if err != nil {
+		glog.Fatal(err) // so we will know
+	}
 
 	// Setup our gRPC management API.
 	go func() {
