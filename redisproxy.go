@@ -122,14 +122,19 @@ func quitCmd(conn redcon.Conn, cmd redcon.Command, key string) {
 
 func configCmd(conn redcon.Conn, cmd redcon.Command, key string) {
 	// This simple (blank) response is only here to allow for the
-	// redis-benchmark command to work with this example.
+	// redis-benchmark command to work with this clone.
 	conn.WriteArray(2)
 	conn.WriteBulk(cmd.Args[2])
 	conn.WriteBulkString("")
 }
 
 func commandCmd(conn redcon.Conn, cmd redcon.Command, key string) {
-	v, err := redisFleet.do(uuid.NewString(), cmd.Args)
+	k := key
+	if k == "" {
+		k = uuid.NewString()
+	}
+
+	v, err := redisFleet.do(k, cmd.Args)
 	if err != nil {
 		conn.WriteError(err.Error())
 	} else {
