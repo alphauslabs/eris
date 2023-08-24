@@ -10,11 +10,12 @@ import (
 	"github.com/buraksezer/consistent"
 	"github.com/golang/glog"
 	"github.com/gomodule/redigo/redis"
+	"github.com/google/uuid"
 )
 
 const (
 	maxIdle   = 3
-	maxActive = 20
+	maxActive = 100
 )
 
 type cmember string
@@ -114,11 +115,6 @@ func (m *fleet) addMember(host string) {
 	}
 }
 
-func (m *fleet) ping() error {
-	_, err := m.do("locate/ping", [][]byte{[]byte("PING")})
-	return err
-}
-
 func (m *fleet) worker(id string, pool *redis.Pool, queue chan *rcmd, done *sync.WaitGroup) {
 	defer func() { done.Done() }()
 	glog.Infof("runner %v started", id)
@@ -133,7 +129,6 @@ func (m *fleet) worker(id string, pool *redis.Pool, queue chan *rcmd, done *sync
 }
 
 func (m *fleet) do(key string, args [][]byte) (interface{}, error) {
-	defer func(begin time.Time) { glog.Infof("[do] took %v", time.Since(begin)) }(time.Now())
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 	cmd := []string{string(args[0])}
@@ -156,6 +151,11 @@ func (m *fleet) do(key string, args [][]byte) (interface{}, error) {
 	err := <-c.done // wait for reply
 	glog.Infof("[do] runner=%v, key=%v, cmd=%v", c.runner, key, cmd)
 	return c.reply, err
+}
+
+func (m *fleet) ping() error {
+	_, err := m.do(uuid.NewString(), [][]byte{[]byte("PING")})
+	return err
 }
 
 func (m *fleet) close() {

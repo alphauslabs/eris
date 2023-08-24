@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/uuid"
@@ -34,6 +35,10 @@ var (
 //
 // If this custom args is not provided, args[1] will be used
 func handler(conn redcon.Conn, cmd redcon.Command) {
+	defer func(begin time.Time) {
+		glog.Infof("[handler] took %v", time.Since(begin))
+	}(time.Now())
+
 	ncmd := cmd
 	var key string
 	if len(ncmd.Args) >= 2 {
@@ -131,48 +136,3 @@ func commandCmd(conn redcon.Conn, cmd redcon.Command, key string) {
 		conn.WriteAny(v)
 	}
 }
-
-// func setCmd(conn redcon.Conn, cmd redcon.Command, key string) {
-// 	if len(cmd.Args) != 3 {
-// 		conn.WriteError("ERR wrong number of arguments for '" + string(cmd.Args[0]) + "' command")
-// 		return
-// 	}
-
-// 	mu.Lock()
-// 	items[string(cmd.Args[1])] = cmd.Args[2]
-// 	mu.Unlock()
-// 	conn.WriteString("OK")
-// }
-
-// func getCmd(conn redcon.Conn, cmd redcon.Command, key string) {
-// 	if len(cmd.Args) != 2 {
-// 		conn.WriteError("ERR wrong number of arguments for '" + string(cmd.Args[0]) + "' command")
-// 		return
-// 	}
-
-// 	mu.RLock()
-// 	val, ok := items[string(cmd.Args[1])]
-// 	mu.RUnlock()
-// 	if !ok {
-// 		conn.WriteNull()
-// 	} else {
-// 		conn.WriteBulk(val)
-// 	}
-// }
-
-// func delCmd(conn redcon.Conn, cmd redcon.Command, key string) {
-// 	if len(cmd.Args) != 2 {
-// 		conn.WriteError("ERR wrong number of arguments for '" + string(cmd.Args[0]) + "' command")
-// 		return
-// 	}
-
-// 	mu.Lock()
-// 	_, ok := items[string(cmd.Args[1])]
-// 	delete(items, string(cmd.Args[1]))
-// 	mu.Unlock()
-// 	if !ok {
-// 		conn.WriteInt(0)
-// 	} else {
-// 		conn.WriteInt(1)
-// 	}
-// }
