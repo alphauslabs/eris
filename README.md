@@ -10,6 +10,8 @@ Most of the "caching" commands in Redis need a key (usually `args[1]`, or the ar
 
 Adding the `hash={key}` argument at the end of a command tells `jupiter` to use `{key}` as the hash. This argument won't be included in the final Redis command that is submitted to the node.
 
+For example:
+
 ```sh
 # Use 'somekey' as the hashing key.
 redis> SET hello world hash=somekey
@@ -31,7 +33,7 @@ redis> SCAN 0 MATCH key* hash=somekey
 
 Finally, `jupiter` will use a random hash key if none is detected/provided. For example, commands with no (or optional) arguments such as `TIME`, `RANDOMKEY`, `PING`, etc.
 
-### Example
+### Usage
 
 ```go
 import (
