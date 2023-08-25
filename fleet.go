@@ -81,7 +81,7 @@ func (m *fleet) addMember(host string) {
 					return redis.Dial("tcp", host)
 				},
 			},
-			queue: make(chan *rcmd, maxActive),
+			queue: make(chan *rcmd, 10_000),
 		}
 
 		for i := 0; i < maxActive; i++ {
