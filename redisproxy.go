@@ -31,7 +31,7 @@ var (
 //	{key} = string combination (chars not allowed: ,=)
 //	{num} = 0-based index in args to use as hash key
 //
-// If this custom args is not provided, args[1] will be used
+// If this custom args is not provided, args[1] will be used.
 func handler(conn redcon.Conn, cmd redcon.Command) {
 	ncmd := cmd
 	var key string
@@ -74,6 +74,10 @@ func handler(conn redcon.Conn, cmd redcon.Command) {
 
 	if len(ncmd.Args) >= 2 && key == "" {
 		key = string(ncmd.Args[1])
+	}
+
+	if key == "" {
+		key = uuid.NewString()
 	}
 
 	v, err := redisFleet.do(key, ncmd.Args)
