@@ -18,6 +18,16 @@ redis> GET hello hash=somekey
 # Here, jupiter will use 'hello' as the hash.
 redis> SET hello world
 redis> GET hello
+
+# For scans, you most definitely want to provide the hash.
+redis> MSET key1 val1 key2 val2 key3 val3 hash=somekey
+"OK"
+redis> SCAN 0 MATCH key* hash=somekey
+1) "0"
+2) 1) "key3"
+   2) "key2"
+   3) "key1"
+   4) "key:__rand_int__"
 ```
 
 Finally, `jupiter` will use a random hash key if none is detected/provided. For example, commands with no (or optional) arguments such as `TIME`, `RANDOMKEY`, `PING`, etc.
