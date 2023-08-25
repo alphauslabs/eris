@@ -20,6 +20,8 @@ redis> SET hello world
 redis> GET hello
 ```
 
+Finally, `jupiter` will use a random hash key if none is detected/provided (for example, commands with no (or optional) arguments such as `TIME`, `RANDOMKEY`, `PING`, etc.)
+
 ### Example
 
 TBD
