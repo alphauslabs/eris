@@ -25,6 +25,11 @@ Finally, `jupiter` will use a random hash key if none is detected/provided. For 
 ### Example
 
 ```go
+import (
+  ...
+  "github.com/gomodule/redigo/redis"
+)
+
 hashKey := "hash=sample/hashkey"
 pool := &redis.Pool{
   MaxIdle:     3,
