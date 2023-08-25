@@ -27,7 +27,6 @@ redis> SCAN 0 MATCH key* hash=somekey
 2) 1) "key3"
    2) "key2"
    3) "key1"
-   4) "key:__rand_int__"
 ```
 
 Finally, `jupiter` will use a random hash key if none is detected/provided. For example, commands with no (or optional) arguments such as `TIME`, `RANDOMKEY`, `PING`, etc.
