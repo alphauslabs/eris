@@ -1,9 +1,10 @@
-package main
+package fleet
 
 import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/alphauslabs/jupiter/internal/appdata"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/golang/glog"
 )
@@ -11,12 +12,13 @@ import (
 var (
 	ctrlBroadcastLeaderLiveness = "CTRL_BROADCAST_LEADER_LIVENESS"
 
-	fnBroadcast = map[string]func(e *cloudevents.Event) ([]byte, error){
+	fnBroadcast = map[string]func(*appdata.AppData, *cloudevents.Event) ([]byte, error){
 		ctrlBroadcastLeaderLiveness: doBroadcastLeaderLiveness,
 	}
 )
 
-func broadcastHandler(data interface{}, msg []byte) ([]byte, error) {
+func BroadcastHandler(data interface{}, msg []byte) ([]byte, error) {
+	app := data.(*appdata.AppData)
 	var e cloudevents.Event
 	err := json.Unmarshal(msg, &e)
 	if err != nil {
@@ -28,10 +30,10 @@ func broadcastHandler(data interface{}, msg []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed: unsupported type: %v", e.Type())
 	}
 
-	return fnBroadcast[e.Type()](&e)
+	return fnBroadcast[e.Type()](app, &e)
 }
 
-func doBroadcastLeaderLiveness(e *cloudevents.Event) ([]byte, error) {
-	leaderActive.On()
+func doBroadcastLeaderLiveness(app *appdata.AppData, e *cloudevents.Event) ([]byte, error) {
+	app.LeaderActive.On()
 	return nil, nil
 }

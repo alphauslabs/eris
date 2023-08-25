@@ -1,4 +1,4 @@
-package main
+package fleet
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/alphauslabs/jupiter/internal"
+	"github.com/alphauslabs/jupiter/internal/appdata"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/flowerinthenight/hedge"
 	"github.com/golang/glog"
@@ -16,12 +18,13 @@ import (
 var (
 	ctrlPingPong = "CTRL_PING_PONG"
 
-	fnLeader = map[string]func(e *cloudevents.Event) ([]byte, error){
+	fnLeader = map[string]func(*appdata.AppData, *cloudevents.Event) ([]byte, error){
 		ctrlPingPong: doLeaderPingPong,
 	}
 )
 
-func leaderHandler(data interface{}, msg []byte) ([]byte, error) {
+func LeaderHandler(data interface{}, msg []byte) ([]byte, error) {
+	app := data.(*appdata.AppData)
 	var e cloudevents.Event
 	err := json.Unmarshal(msg, &e)
 	if err != nil {
@@ -33,10 +36,10 @@ func leaderHandler(data interface{}, msg []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed: unsupported type: %v", e.Type())
 	}
 
-	return fnLeader[e.Type()](&e)
+	return fnLeader[e.Type()](app, &e)
 }
 
-func doLeaderPingPong(e *cloudevents.Event) ([]byte, error) {
+func doLeaderPingPong(app *appdata.AppData, e *cloudevents.Event) ([]byte, error) {
 	switch {
 	case string(e.Data()) != "PING":
 		return nil, fmt.Errorf("invalid message")
@@ -45,10 +48,10 @@ func doLeaderPingPong(e *cloudevents.Event) ([]byte, error) {
 	}
 }
 
-func ensureLeaderActive(ctx context.Context) (bool, error) {
-	msg := newEvent([]byte("PING"), "jupiter", ctrlPingPong)
+func EnsureLeaderActive(ctx context.Context, app *appdata.AppData) (bool, error) {
+	msg := internal.NewEvent([]byte("PING"), "jupiter", ctrlPingPong)
 	b, _ := json.Marshal(msg)
-	r, err := sendToLeader(ctx, b)
+	r, err := SendToLeader(ctx, app, b)
 	if err != nil {
 		return false, err
 	}
@@ -61,7 +64,7 @@ func ensureLeaderActive(ctx context.Context) (bool, error) {
 	}
 }
 
-func sendToLeader(ctx context.Context, m []byte) ([]byte, error) {
+func SendToLeader(ctx context.Context, app *appdata.AppData, m []byte) ([]byte, error) {
 	result := make(chan []byte, 1)
 	done := make(chan error, 1)
 	go func() {
@@ -74,7 +77,7 @@ func sendToLeader(ctx context.Context, m []byte) ([]byte, error) {
 
 		bo := gaxv2.Backoff{Max: time.Minute}
 		for i := 0; i < 10; i++ {
-			if !op.IsRunning() {
+			if !app.FleetOp.IsRunning() {
 				time.Sleep(bo.Pause())
 				continue
 			}
@@ -82,7 +85,7 @@ func sendToLeader(ctx context.Context, m []byte) ([]byte, error) {
 
 		for i := 0; i < 10; i++ {
 			var r []byte
-			r, err = op.Send(ctx, m)
+			r, err = app.FleetOp.Send(ctx, m)
 			if err != nil {
 				time.Sleep(bo.Pause())
 				continue
@@ -103,25 +106,25 @@ func sendToLeader(ctx context.Context, m []byte) ([]byte, error) {
 	}
 }
 
-func leaderLiveness(ctx context.Context) {
+func LeaderLiveness(ctx context.Context, app *appdata.AppData) {
 	ticker := time.NewTicker(time.Minute * 5)
 	var active int32
 
 	do := func() {
 		atomic.StoreInt32(&active, 1)
 		defer atomic.StoreInt32(&active, 0)
-		hl, _ := op.HasLock()
+		hl, _ := app.FleetOp.HasLock()
 		if !hl {
 			return // leader's job only
 		}
 
-		b, _ := json.Marshal(newEvent(
+		b, _ := json.Marshal(internal.NewEvent(
 			hedge.KeyValue{},
 			"jupiter",
 			ctrlBroadcastLeaderLiveness,
 		))
 
-		outs := op.Broadcast(ctx, b)
+		outs := app.FleetOp.Broadcast(ctx, b)
 		for i, out := range outs {
 			if out.Error != nil {
 				glog.Errorf("leader liveness: broadcast[%v] failed: %v", i, out.Error)

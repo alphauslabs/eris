@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
@@ -11,7 +11,7 @@ import (
 // args[1] = type (string)
 // args[2] = contenttype (string), default: application/json
 // See https://github.com/cloudevents/sdk-go for more details.
-func newEvent(data interface{}, args ...string) cloudevents.Event {
+func NewEvent(data interface{}, args ...string) cloudevents.Event {
 	src := "ouchan/internal"
 	typ := "ouchan.event.internal"
 	ctt := cloudevents.ApplicationJSON

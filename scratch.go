@@ -6,6 +6,8 @@ import (
 	"math"
 	"time"
 
+	"github.com/alphauslabs/jupiter/internal/cluster"
+	"github.com/alphauslabs/jupiter/internal/flags"
 	"github.com/buraksezer/consistent"
 )
 
@@ -30,9 +32,9 @@ func test() {
 	// Modify PartitionCount, ReplicationFactor and Load to increase or decrease
 	// relocation ratio.
 	cfg := consistent.Config{
-		PartitionCount:    *paramPartitions,
-		ReplicationFactor: *paramReplicationFactor,
-		Hasher:            hasher{},
+		PartitionCount:    *flags.Partitions,
+		ReplicationFactor: *flags.ReplicationFactor,
+		Hasher:            cluster.Hasher{},
 	}
 
 	c := consistent.New(members, cfg)

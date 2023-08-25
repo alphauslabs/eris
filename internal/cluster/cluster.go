@@ -1,10 +1,11 @@
-package main
+package cluster
 
 import (
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/alphauslabs/jupiter/internal/flags"
 	"github.com/buraksezer/consistent"
 	"github.com/golang/glog"
 	"github.com/gomodule/redigo/redis"
@@ -37,7 +38,7 @@ type member struct {
 	done  sync.WaitGroup
 }
 
-type fleet struct {
+type Cluster struct {
 	mtx        sync.RWMutex
 	members    map[string]*member
 	consistent *consistent.Consistent
@@ -67,7 +68,7 @@ type fleet struct {
 // 	m.members = v
 // }
 
-func (m *fleet) addMember(host string) {
+func (m *Cluster) AddMember(host string) {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 	if _, found := m.members[host]; !found {
@@ -102,9 +103,9 @@ func (m *fleet) addMember(host string) {
 		m.consistent = consistent.New(
 			[]consistent.Member{cm},
 			consistent.Config{
-				PartitionCount:    *paramPartitions,
-				ReplicationFactor: *paramReplicationFactor,
-				Hasher:            hasher{},
+				PartitionCount:    *flags.Partitions,
+				ReplicationFactor: *flags.ReplicationFactor,
+				Hasher:            Hasher{},
 			},
 		)
 	} else {
@@ -113,7 +114,7 @@ func (m *fleet) addMember(host string) {
 	}
 }
 
-func (m *fleet) runner(id string, pool *redis.Pool, queue chan *rcmd, done *sync.WaitGroup) {
+func (m *Cluster) runner(id string, pool *redis.Pool, queue chan *rcmd, done *sync.WaitGroup) {
 	defer func() { done.Done() }()
 	glog.Infof("runner %v started", id)
 	con := pool.Get()
@@ -126,7 +127,7 @@ func (m *fleet) runner(id string, pool *redis.Pool, queue chan *rcmd, done *sync
 	}
 }
 
-func (m *fleet) do(key string, args [][]byte) (interface{}, error) {
+func (m *Cluster) Do(key string, args [][]byte) (interface{}, error) {
 	var node string
 	// cmd := []string{string(args[0])}
 
@@ -155,12 +156,12 @@ func (m *fleet) do(key string, args [][]byte) (interface{}, error) {
 	return c.reply, err
 }
 
-func (m *fleet) ping() error {
-	_, err := m.do(uuid.NewString(), [][]byte{[]byte("PING")})
+func (m *Cluster) Ping() error {
+	_, err := m.Do(uuid.NewString(), [][]byte{[]byte("PING")})
 	return err
 }
 
-func (m *fleet) close() {
+func (m *Cluster) Close() {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 	for k, v := range m.members {
@@ -177,4 +178,4 @@ func (m *fleet) close() {
 // 	delete(m.members, id)
 // }
 
-func newFleet() *fleet { return &fleet{members: map[string]*member{}} }
+func NewCluster() *Cluster { return &Cluster{members: map[string]*member{}} }

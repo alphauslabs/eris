@@ -12,6 +12,10 @@ import (
 	"time"
 
 	"cloud.google.com/go/spanner"
+	"github.com/alphauslabs/jupiter/internal/appdata"
+	"github.com/alphauslabs/jupiter/internal/cluster"
+	"github.com/alphauslabs/jupiter/internal/flags"
+	"github.com/alphauslabs/jupiter/internal/fleet"
 	v1 "github.com/alphauslabs/jupiter/proto/v1"
 	"github.com/flowerinthenight/hedge"
 	"github.com/flowerinthenight/timedoff"
@@ -22,20 +26,9 @@ import (
 )
 
 var (
-	paramTest              = flag.Bool("test", false, "Scratch pad, anything")
-	paramMembers           = flag.String("members", "", "Initial Redis members, comma-separated, fmt: [passwd@]host:port")
-	paramPartitions        = flag.Int("partitions", 27_103, "Partition count for our consistent hashring")
-	paramReplicationFactor = flag.Int("replicationfactor", 10, "Replication factor for our consistent hashring")
-	paramDatabase          = flag.String("db", "", "Spanner database, fmt: projects/{v}/instances/{v}/databases/{v}")
-
 	cctx = func(p context.Context) context.Context {
 		return context.WithValue(p, struct{}{}, nil)
 	}
-
-	client       *spanner.Client    // spanner client
-	op           *hedge.Op          // group coordinator
-	leaderActive *timedoff.TimedOff // when active/on, we have a live leader in the group
-	redisFleet   *fleet             // our main fleet of cache nodes
 
 	// f *os.File
 )
@@ -74,41 +67,42 @@ func main() {
 	defer glog.Flush()
 
 	// Test:
-	if *paramTest {
+	if *flags.Test {
 		test()
 		return
 	}
 
+	app := &appdata.AppData{}
 	var err error
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// For debug: log if no leader detected.
-	leaderActive = timedoff.New(time.Minute*30, &timedoff.CallbackT{
+	app.LeaderActive = timedoff.New(time.Minute*30, &timedoff.CallbackT{
 		Callback: func(args interface{}) {
 			glog.Errorf("failed: no leader for the past 30mins?")
 		},
 	})
 
-	client, err = spanner.NewClient(cctx(ctx), *paramDatabase)
+	app.Client, err = spanner.NewClient(cctx(ctx), *flags.Database)
 	if err != nil {
 		glog.Fatal(err) // essential
 	}
 
 	// Setup our group coordinator.
-	op = hedge.New(
-		client,
+	app.FleetOp = hedge.New(
+		app.Client,
 		":8081",
 		"jupiter_lock",
 		"jupiter",
 		"jupiter_store",
 		hedge.WithGroupSyncInterval(time.Second*10),
-		hedge.WithLeaderHandler(nil, leaderHandler),
-		hedge.WithBroadcastHandler(nil, broadcastHandler),
+		hedge.WithLeaderHandler(app, fleet.LeaderHandler),
+		hedge.WithBroadcastHandler(app, fleet.BroadcastHandler),
 	)
 
 	done := make(chan error)
 	doneLock := make(chan error, 1)
-	go op.Run(cctx(ctx), doneLock)
+	go app.FleetOp.Run(cctx(ctx), doneLock)
 
 	// Ensure leader is active before proceeding.
 	func() {
@@ -118,7 +112,7 @@ func main() {
 		}(&m, time.Now())
 
 		glog.Infof("attempt leader wait...")
-		ok, err := ensureLeaderActive(cctx(ctx))
+		ok, err := fleet.EnsureLeaderActive(cctx(ctx), app)
 		switch {
 		case !ok:
 			m = fmt.Sprintf("failed: %v, no leader after", err)
@@ -127,17 +121,17 @@ func main() {
 		}
 	}()
 
-	go leaderLiveness(cctx(ctx))
+	go fleet.LeaderLiveness(cctx(ctx), app)
 
-	// Setup our fleet of Redis nodes.
-	redisFleet = newFleet()
-	defer redisFleet.close()
-	for _, m := range strings.Split(*paramMembers, ",") {
-		redisFleet.addMember(m)
+	// Setup our cluster of Redis nodes.
+	rcluster := cluster.NewCluster()
+	defer rcluster.Close()
+	for _, m := range strings.Split(*flags.Members, ",") {
+		rcluster.AddMember(m)
 	}
 
 	// Test random ping.
-	err = redisFleet.ping()
+	err = rcluster.Ping()
 	if err != nil {
 		glog.Fatal(err) // so we will know
 	}
@@ -153,14 +147,14 @@ func main() {
 
 	// Setup our Redis proxy.
 	addr := ":6379"
-	rc := redcon.NewServer(addr, handler,
+	rclone := redcon.NewServer(addr, newProxy(app, rcluster).Handler,
 		func(conn redcon.Conn) bool { return true },
 		func(conn redcon.Conn, err error) {},
 	)
 
 	go func() {
 		glog.Infof("start redis proxy at %s", addr)
-		err := rc.ListenAndServe()
+		err := rclone.ListenAndServe()
 		if err != nil {
 			glog.Fatal(err)
 		}
@@ -182,6 +176,6 @@ func main() {
 
 	<-done
 	<-doneLock
-	rc.Close()
-	client.Close()
+	rclone.Close()
+	app.Client.Close()
 }
