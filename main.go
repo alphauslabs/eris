@@ -16,6 +16,7 @@ import (
 	"github.com/alphauslabs/jupiter/internal/cluster"
 	"github.com/alphauslabs/jupiter/internal/flags"
 	"github.com/alphauslabs/jupiter/internal/fleet"
+	rl "github.com/alphauslabs/jupiter/internal/ratelimit"
 	v1 "github.com/alphauslabs/jupiter/proto/v1"
 	"github.com/flowerinthenight/hedge"
 	"github.com/flowerinthenight/timedoff"
@@ -43,10 +44,10 @@ func grpcServe(ctx context.Context, network, port string, done chan error) error
 	defer l.Close()
 	gs := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			ratelimit.UnaryServerInterceptor(&limiter{}),
+			ratelimit.UnaryServerInterceptor(&rl.Limiter{}),
 		),
 		grpc.ChainStreamInterceptor(
-			ratelimit.StreamServerInterceptor(&limiter{}),
+			ratelimit.StreamServerInterceptor(&rl.Limiter{}),
 		),
 	)
 
