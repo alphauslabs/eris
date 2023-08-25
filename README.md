@@ -4,8 +4,10 @@ This is not a Redis server replacement, although it is compatible with most Redi
 
 There is a performance penalty over direct connections to Redis due to its use of hashing; it requires all commands to have a key as hash to find the corresponding Redis node. Thus, if you require high performance caching, you're better off using a direct connection to a separate Redis node/cluster.
 
-### Hashing
+**Hashing**
+
 TBD
 
-### Example
+**Example**
+
 TBD
