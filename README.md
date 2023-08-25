@@ -6,7 +6,27 @@ There is a performance penalty over direct connections to Redis due to its use o
 
 **Hashing**
 
-TBD
+Most of the "caching" commands in Redis need a key (usually the argument after the command itself, i.e. `GET {key} ...`). `jupiter` will try to use this argument as the default hashing key, therefore some other commands are not supported, such as cluster commands, Pub/Sub, transactions, LUA scripting, etc. However, `jupiter` also provides a custom way to override the hashing key if needed. Since the equivalent node for a hash doesn't really change (unless the cluster membership changes), this is useful if you want a guarantee to have the same node handling your commands.
+
+```sh
+# Option 1:
+# Adding the hash={key} argument at the end.
+# This argument won't be included in the actual Redis command.
+redis> SET hello world hash=samplehash
+redis> GET hello hash=samplehash
+
+# This is actually the same as the following since
+# jupiter will use the argument 'hello' as the hash.
+redis> SET hello world
+redis> GET hello
+```
+
+```sh
+# Option 2:
+# Adding the index={num} argument at the end.
+# This argument won't be included in the actual Redis command.
+# The {num} refers to the 0-based index of the command to be used as key.
+```
 
 **Example**
 
