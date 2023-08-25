@@ -11,11 +11,11 @@ Most of the "caching" commands in Redis need a key (usually `args[1]`, or the ar
 Adding the `hash={key}` argument at the end of a command tells `jupiter` to use `{key}` as the hash. This argument won't be included in the final Redis command that is submitted to the node.
 
 ```sh
-redis> SET hello world hash=samplehash
-redis> GET hello hash=samplehash
+# Use 'somekey' as the hashing key
+redis> SET hello world hash=somekey
+redis> GET hello hash=somekey
 
-# This is actually the same as the following since jupiter
-# will use the argument 'hello' as the hash by default.
+# In this case, jupiter will use the argument 'hello' as the hash.
 redis> SET hello world
 redis> GET hello
 ```
