@@ -17,11 +17,10 @@ var (
 	ps    redcon.PubSub
 
 	cmds = map[string]func(redcon.Conn, redcon.Command, string){
-		"detach":  detachCmd,
-		"ping":    pingCmd,
-		"quit":    quitCmd,
-		"config":  configCmd,
-		"command": commandCmd,
+		"detach": detachCmd,
+		"ping":   pingCmd,
+		"quit":   quitCmd,
+		"config": configCmd,
 	}
 )
 
@@ -126,18 +125,4 @@ func configCmd(conn redcon.Conn, cmd redcon.Command, key string) {
 	conn.WriteArray(2)
 	conn.WriteBulk(cmd.Args[2])
 	conn.WriteBulkString("")
-}
-
-func commandCmd(conn redcon.Conn, cmd redcon.Command, key string) {
-	k := key
-	if k == "" {
-		k = uuid.NewString()
-	}
-
-	v, err := redisFleet.do(k, cmd.Args)
-	if err != nil {
-		conn.WriteError(err.Error())
-	} else {
-		conn.WriteAny(v)
-	}
 }
