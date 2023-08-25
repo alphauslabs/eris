@@ -37,26 +37,26 @@ Finally, `jupiter` will use a random hash key if none is detected/provided. For 
 
 ```go
 import (
-  ...
-  "github.com/gomodule/redigo/redis"
+    ...
+    "github.com/gomodule/redigo/redis"
 )
 
 hashKey := "hash=sample/hashkey"
 pool := &redis.Pool{
-  MaxIdle:     3,
-  MaxActive:   100,
-  IdleTimeout: 240 * time.Second,
-  Dial: func() (redis.Conn, error) {
-    return redis.Dial("tcp", "jupiter-redis.default.svc.cluster.local:6379")
-  },
+    MaxIdle:     3,
+    MaxActive:   100,
+    IdleTimeout: 240 * time.Second,
+    Dial: func() (redis.Conn, error) {
+        return redis.Dial("tcp", "jupiter-redis.default.svc.cluster.local:6379")
+    },
 }
 
 con := pool.Get()
 defer con.Close()
 v, err := redis.String(con.Do("PING", hashKey))
 if err != nil {
-  log.Printf("PING failed: %v", err)
+    log.Printf("PING failed: %v", err)
 } else {
-  log.Printf("reply=%v", v)
+    log.Printf("reply=%v", v)
 }
 ```
