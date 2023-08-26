@@ -132,7 +132,7 @@ func main() {
 	}
 
 	// Test random ping.
-	err = rcluster.Ping()
+	err = rcluster.RandomPing()
 	if err != nil {
 		glog.Fatal(err) // so we will know
 	}

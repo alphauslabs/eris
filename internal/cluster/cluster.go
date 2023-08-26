@@ -156,7 +156,7 @@ func (m *Cluster) Do(key string, args [][]byte) (interface{}, error) {
 	return c.reply, err
 }
 
-func (m *Cluster) Ping() error {
+func (m *Cluster) RandomPing() error {
 	_, err := m.Do(uuid.NewString(), [][]byte{[]byte("PING")})
 	return err
 }
