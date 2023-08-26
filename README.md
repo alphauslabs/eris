@@ -60,3 +60,17 @@ if err != nil {
     log.Printf("reply=%v", v)
 }
 ```
+
+### Try
+
+If you want to try `jupiter` using `redis-cli`, you can do so by:
+
+```sh
+# Do a port-forward of the prod service to your local (separate terminal):
+$ kubepfm --target service/jupiter-redis:6379:6379
+
+# Connect redis-cli to the forwarded port (separate terminal):
+$ redis-cli
+127.0.0.1:6379> ...
+127.0.0.1:6379> quit
+```
