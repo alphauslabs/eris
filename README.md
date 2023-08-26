@@ -61,7 +61,7 @@ if err != nil {
 }
 ```
 
-### Try
+### Try it out (internal)
 
 If you want to try `jupiter` using `redis-cli`, you can do so by:
 
