@@ -6,7 +6,7 @@ There is a performance penalty over direct connections to Redis due to its use o
 
 ### Hashing
 
-Most of the "caching" commands in Redis need a key (usually `args[1]`, or the argument after the command itself). `jupiter` will try to use this argument as the default hashing key. This renders some other commands unsupported, such as cluster commands, Pub/Sub, transactions, LUA scripting, etc. To address this, `jupiter` provides a custom way to input a (or override the) hashing key if needed **using the last argument**.
+Most of the "caching" commands in Redis need a key (usually `args[1]`, or the argument after the command itself). `jupiter` will try to use this argument as the default hashing key. This renders some other commands unsupported, such as cluster commands, Pub/Sub, transactions, LUA scripting, etc. `jupiter` provides a custom way to input a (or override the) hashing key if needed **using the last argument**.
 
 Adding the `hash={key}` argument at the end of a command tells `jupiter` to use `{key}` as the hash key. This argument won't be included in the final Redis command that is submitted to the target node.
 
