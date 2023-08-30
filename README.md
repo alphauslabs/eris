@@ -79,7 +79,7 @@ $ redis-cli
 
 ### Use case(s)
 
-At the moment, our [TrueUnblended Engine](https://labs.alphaus.cloud/docs/trueunblended/) and some of our [streaming APIs](https://labs.alphaus.cloud/blueapidocs/#/Cost) use `jupiter` to cache big blobs of graph and reports data into multiple chunks (64KB by default) which are distributed across its cluster. `jupiter` exposes a [filesystem-like API](https://github.com/mobingilabs/ouchan/tree/master/pkg/jupiter) that clients can use to read and write files (or data blobs). Each data will have a name (filename) and once written, its data chunks will be distributed across the cluster. During retrieval, `jupiter` handles the assembly of all data chunks from the cluster and returns it to the caller a one blob.
+At the moment, our [TrueUnblended Engine](https://labs.alphaus.cloud/docs/trueunblended/) and some of our [streaming APIs](https://labs.alphaus.cloud/blueapidocs/#/Cost) use `jupiter` to cache big blobs of graph and reports data into multiple chunks (64KB by default) which are distributed across its cluster. `jupiter` exposes a [filesystem-like API](https://github.com/mobingilabs/ouchan/tree/master/pkg/jupiter) that clients can use to read and write files (or data blobs) to a cluster. Each data will have a name (filename) and once written, its data chunks will be distributed across the cluster. During retrieval, `jupiter` handles the assembly of all data chunks from the cluster and returns it to the caller a one blob.
 
 ### Limitations
 
