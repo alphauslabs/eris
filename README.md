@@ -83,4 +83,4 @@ At the moment, our [TrueUnblended Engine](https://labs.alphaus.cloud/docs/trueun
 
 ### Limitations
 
-Pipelining and transactions are not supported as `jupiter` doesn't guarantee the use of a single connection multiple related commands, even if the same hash key is provided.
+Pipelining and transactions are not supported as `jupiter` doesn't guarantee the use of a single connection for multiple, related commands (i.e. `MUTLI`, `...`, `EXEC`), even if the same hash key is provided.
