@@ -17,7 +17,7 @@ For example:
 redis> SET hello world hash=somekey
 redis> GET hello hash=somekey
 
-# Here, jupiter will use 'hello' as the hash.
+# Here, jupiter will use 'hello' as the hashing key.
 redis> SET hello world
 redis> GET hello
 
