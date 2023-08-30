@@ -23,6 +23,7 @@ var (
 		"ping":   pingCmd,
 		"quit":   quitCmd,
 		"config": configCmd,
+		"peek":   peekCmd,
 	}
 )
 
@@ -138,4 +139,10 @@ func configCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	conn.WriteArray(2)
 	conn.WriteBulk(cmd.Args[2])
 	conn.WriteBulkString("")
+}
+
+func peekCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
+	c := conn.PeekPipeline()
+	glog.Infof("%+v", c)
+	conn.WriteString("OK")
 }
