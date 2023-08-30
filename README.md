@@ -88,8 +88,8 @@ jsc.Write([]byte("example data bigger than 64KB"))
 // Can use 'jsc' to read or can declare another
 // object for reading, like:
 //
-//   reader := jupiter.NewShardedCache("filename1")
-//   b, _ := reader.Read()
+//   r := jupiter.NewShardedCache("filename1")
+//   b, _ := r.Read()
 //
 b, err := jsc.Read()
 if err != nil {
