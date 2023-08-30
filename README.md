@@ -31,7 +31,7 @@ redis> SCAN 0 MATCH key* hash=somekey
    3) "key1"
 ```
 
-Finally, `jupiter` will use a random hash key if none is detected/provided. For example, commands with no arguments such as `TIME`, `RANDOMKEY`, etc.
+Finally, `jupiter` will use a random hash key if none is detected/provided. For example, commands with no arguments such as `DBSIZE`, `TIME`, `RANDOMKEY`, etc.
 
 ### Usage
 
