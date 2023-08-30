@@ -118,6 +118,8 @@ func pingCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 			conn.WriteAny(v)
 		}
 	default:
+		c := conn.PeekPipeline()
+		glog.Infof("%+v", c)
 		conn.WriteString("PONG")
 	}
 
