@@ -23,7 +23,6 @@ var (
 		"ping":   pingCmd,
 		"quit":   quitCmd,
 		"config": configCmd,
-		"peek":   peekCmd,
 	}
 )
 
@@ -40,6 +39,12 @@ type proxy struct {
 //
 // If this custom args is not provided, args[1] will be used.
 func (p *proxy) Handler(conn redcon.Conn, cmd redcon.Command) {
+	c := conn.PeekPipeline()
+	glog.Infof("%+v", c)
+	for i, v := range cmd.Args {
+		glog.Infof("dbg[%v]: %v", i, string(v))
+	}
+
 	ncmd := cmd
 	var key string
 	if len(ncmd.Args) >= 2 {
@@ -139,10 +144,4 @@ func configCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	conn.WriteArray(2)
 	conn.WriteBulk(cmd.Args[2])
 	conn.WriteBulkString("")
-}
-
-func peekCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
-	c := conn.PeekPipeline()
-	glog.Infof("%+v", c)
-	conn.WriteString("OK")
 }
