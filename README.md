@@ -76,3 +76,7 @@ $ redis-cli
 "PONG"
 127.0.0.1:6379> quit
 ```
+
+### Limitations
+
+Pipelining and transactions are not supported as `jupiter` doesn't guarantee to use a single connection for each command.
