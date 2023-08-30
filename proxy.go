@@ -40,13 +40,16 @@ type proxy struct {
 // If this custom args is not provided, args[1] will be used.
 func (p *proxy) Handler(conn redcon.Conn, cmd redcon.Command) {
 	c := conn.PeekPipeline()
-	for i, v := range c {
-		glog.Infof("peek%v: %v", i, string(v.Raw))
+	for _, v := range c {
+		for i, v := range v.Args {
+			glog.Infof("peek[%v]: %v", i, string(v))
+		}
 	}
 
 	for i, v := range cmd.Args {
-		glog.Infof("dbg[%v]: %v", i, string(v))
+		glog.Infof("cmd[%v]: %v", i, string(v))
 	}
+	glog.Infof("dbg ---")
 
 	ncmd := cmd
 	var key string
