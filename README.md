@@ -79,4 +79,4 @@ $ redis-cli
 
 ### Limitations
 
-Pipelining and transactions are not supported as `jupiter` doesn't guarantee the use of a single connection for each command, even if the same hash key is provided.
+Pipelining and transactions are not supported as `jupiter` doesn't guarantee the use of a single connection multiple related commands, even if the same hash key is provided.
