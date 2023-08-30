@@ -77,6 +77,10 @@ $ redis-cli
 127.0.0.1:6379> quit
 ```
 
+### Use case(s)
+
+At the moment, our [TrueUnblended Engine](https://labs.alphaus.cloud/docs/trueunblended/) and some of our [streaming APIs](https://labs.alphaus.cloud/blueapidocs/#/Cost) use `jupiter` to cache big blobs of graph and reports data into multiple chunks (64KB by default) which are distributed across the cluster.
+
 ### Limitations
 
 Pipelining and transactions are not supported as `jupiter` doesn't guarantee the use of a single connection multiple related commands, even if the same hash key is provided.
