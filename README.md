@@ -101,4 +101,4 @@ if err != nil {
 
 ### Limitations
 
-Pipelining and transactions are not supported as `jupiter` doesn't guarantee the use of a single connection for multiple, related commands (i.e. `MUTLI`, `...`, `EXEC`), even if the same hash key is provided.
+Pipelining and transactions are not supported as `jupiter` doesn't guarantee the use of a single connection for multiple, related commands (i.e. `MUTLI`, `...`, `EXEC`), even if the same hash key is provided. We might support these in future versions.
