@@ -12,11 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	maxIdle   = 3
-	maxActive = 1000
-)
-
 type cmember string
 
 func (m cmember) String() string { return string(m) }
@@ -51,8 +46,8 @@ func (m *Cluster) AddMember(host string) {
 		m.members[host] = &member{
 			host: host,
 			pool: &redis.Pool{
-				MaxIdle:     maxIdle,
-				MaxActive:   maxActive,
+				MaxIdle:     *flags.MaxIdle,
+				MaxActive:   *flags.MaxActive,
 				IdleTimeout: 240 * time.Second,
 				Dial: func() (redis.Conn, error) {
 					return redis.Dial("tcp", host)
@@ -61,7 +56,7 @@ func (m *Cluster) AddMember(host string) {
 			queue: make(chan *rcmd, 10_000),
 		}
 
-		for i := 0; i < maxActive; i++ {
+		for i := 0; i < *flags.MaxActive; i++ {
 			id := fmt.Sprintf("%v/%04d", host, i)
 			m.members[host].done.Add(1)
 			go m.runner(
