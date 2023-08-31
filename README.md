@@ -94,7 +94,7 @@ if err != nil {
 //   r := jupiter.NewShardedCache("filename1")
 //   b, _ := r.ReadAll()
 //
-b, err = jsc.ReadAll()
+b, err := jsc.ReadAll()
 if err != nil {
     // failed
 }
