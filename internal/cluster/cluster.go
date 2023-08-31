@@ -14,7 +14,7 @@ import (
 
 const (
 	maxIdle   = 3
-	maxActive = 100
+	maxActive = 1000
 )
 
 type cmember string
@@ -117,11 +117,11 @@ func (m *Cluster) AddMember(host string) {
 func (m *Cluster) runner(id string, pool *redis.Pool, queue chan *rcmd, done *sync.WaitGroup) {
 	defer func() { done.Done() }()
 	glog.Infof("runner %v started", id)
-	con := pool.Get()
-	defer con.Close()
 	for j := range queue {
 		j.runner = id
+		con := pool.Get()
 		out, err := con.Do(j.cmd, j.args...)
+		con.Close()
 		j.reply = out
 		j.done <- err
 	}
