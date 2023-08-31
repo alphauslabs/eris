@@ -83,15 +83,15 @@ At the moment, our [TrueUnblended Engine](https://labs.alphaus.cloud/docs/trueun
 
 ```go
 jsc := jupiter.NewShardedCache("filename1")
-jsc.Write([]byte("example data bigger than 64KB"))
+jsc.WriteAll([]byte("example data bigger than 64KB"))
 ...
 // Can use 'jsc' to read or can declare another
 // object for reading, like:
 //
 //   r := jupiter.NewShardedCache("filename1")
-//   b, _ := r.Read()
+//   b, _ := r.ReadAll()
 //
-b, err := jsc.Read()
+b, err := jsc.ReadAll()
 if err != nil {
     // failed
 }
