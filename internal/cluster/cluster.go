@@ -44,30 +44,6 @@ type Cluster struct {
 	consistent *consistent.Consistent
 }
 
-// func (m *fleet) getMembers() map[string]struct{} {
-// 	m.mtx.Lock()
-// 	copy := make(map[string]struct{})
-// 	for k := range m.members {
-// 		copy[k] = struct{}{}
-// 	}
-
-// 	m.mtx.Unlock()
-// 	return copy
-// }
-
-// func (m *fleet) encodeMembers() string {
-// 	m.mtx.Lock()
-// 	defer m.mtx.Unlock()
-// 	b, _ := json.Marshal(m.members)
-// 	return base64.StdEncoding.EncodeToString(b)
-// }
-
-// func (m *membersT) setMembers(v map[string]string) {
-// 	m.mtx.Lock()
-// 	defer m.mtx.Unlock()
-// 	m.members = v
-// }
-
 func (m *Cluster) AddMember(host string) {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
@@ -129,14 +105,11 @@ func (m *Cluster) runner(id string, pool *redis.Pool, queue chan *rcmd, done *sy
 
 func (m *Cluster) Do(key string, args [][]byte) (interface{}, error) {
 	var node string
-	// cmd := []string{string(args[0])}
-
 	node = m.consistent.LocateKey([]byte(key)).String()
 	nargs := []interface{}{}
 	if len(args) > 1 {
 		for i := 1; i < len(args); i++ {
 			nargs = append(nargs, args[i])
-			// cmd = append(cmd, string(args[i]))
 		}
 	}
 
@@ -150,9 +123,6 @@ func (m *Cluster) Do(key string, args [][]byte) (interface{}, error) {
 	m.members[node].queue <- c
 	m.mtx.RUnlock()
 	err := <-c.done
-
-	// glog.Infof("[do] runner=%v, key=%v, cmd=%v", c.runner, key, cmd)
-
 	return c.reply, err
 }
 
@@ -171,11 +141,5 @@ func (m *Cluster) Close() {
 		v.pool.Close()
 	}
 }
-
-// func (m *membersT) delMember(id string) {
-// 	m.mtx.Lock()
-// 	defer m.mtx.Unlock()
-// 	delete(m.members, id)
-// }
 
 func NewCluster() *Cluster { return &Cluster{members: map[string]*member{}} }
