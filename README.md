@@ -4,6 +4,10 @@
 
 There is a slight performance penalty over direct connections to Redis due to its use of hashing; it requires all commands to have a key as hash to find the corresponding Redis node. If you require high performance caching, you're probably better off using a dedicated Redis node/cluster.
 
+### Why
+
+The main reason why `jupiter` exists is that at the time of this writing, the maximum Memorystore instance you can provision in GCP is 300GB. Beyond this, we need more instances. Instead of leaving the responsibility of accessing multiple Memorystore instances to our applications, it's move convenient to be able to access these clusters of instances as a single entity. After a trial run with [Envoy Redis proxy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_protocols/redis), we wanted something more, especially the ability to add/remove instances seamlessly with minimal interruptions to the client applications.
+
 ### Hashing
 
 Most of the "caching" commands in Redis need a key (usually `args[1]`, or the argument after the command itself). `jupiter` will try to use this argument as the default hashing key. This renders some other Redis commands unsupported, such as cluster commands, Pub/Sub, transactions, LUA scripting, etc. However, `jupiter` also provides a custom way to input a (or override the) hashing key if needed **using the last argument**.
