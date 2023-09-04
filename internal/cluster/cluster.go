@@ -89,12 +89,12 @@ func (m *Cluster) runner(id string, pool *redis.Pool, queue chan *rcmd, done *sy
 	defer func() { done.Done() }()
 	glog.Infof("runner %v started", id)
 	for j := range queue {
-		j.runner = id
 		con := pool.Get()
+		j.runner = id
 		out, err := con.Do(j.cmd, j.args...)
-		con.Close()
 		j.reply = out
 		j.done <- err
+		con.Close()
 	}
 }
 
