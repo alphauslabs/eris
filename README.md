@@ -86,23 +86,15 @@ $ redis-cli
 At the moment, our [TrueUnblended Engine](https://labs.alphaus.cloud/docs/trueunblended/) and some of our [streaming APIs](https://labs.alphaus.cloud/blueapidocs/#/Cost) use `jupiter` to cache graph and reports data into multiple chunks (64KB by default) which are distributed across its cluster. `jupiter` exposes a [filesystem-like API](https://github.com/mobingilabs/ouchan/tree/master/pkg/jupiter) that clients can use to read and write files (or data blobs) to a cluster. Each data will have a name (filename) and once written, its data chunks will be distributed across the cluster. During retrieval, `jupiter` handles the assembly of all data chunks from the cluster and returns it to the caller as a single file (blob). Something like:
 
 ```go
-jsc := jupiter.NewShardedCache("filename1")
-err := jsc.WriteAll([]byte("example data bigger than 64KB"))
+err := jupiter.WriteAll("file1", []byte("data bigger than 64KB"))
 if err != nil {
-    // failed
+    return
 }
 ...
-// Can use 'jsc' to read or can declare another
-// object for reading, like:
-//
-//   r := jupiter.NewShardedCache("filename1")
-//   b, _ := r.ReadAll()
-//
-b, err := jsc.ReadAll()
+b, err := jupiter.ReadAll("file1")
 if err != nil {
-    // failed
+    return
 }
-
 // do something with b
 ```
 
