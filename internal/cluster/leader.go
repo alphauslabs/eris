@@ -131,7 +131,7 @@ func LeaderLiveness(ctx context.Context, app *appdata.AppData) {
 		b, _ := json.Marshal(internal.NewEvent(
 			hedge.KeyValue{},
 			"jupiter",
-			ctrlBroadcastLeaderLiveness,
+			CtrlBroadcastLeaderLiveness,
 		))
 
 		outs := app.FleetOp.Broadcast(ctx, b)
