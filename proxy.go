@@ -144,6 +144,7 @@ func configCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 }
 
 func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
+	ctx := context.Background()
 	key = "proto/len"
 	n, err := redis.Int(p.cluster.Do(key, [][]byte{[]byte("GET"), []byte("proto/len")}))
 	glog.Infof("%v, %v", n, err)
@@ -157,7 +158,7 @@ func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 		cluster.CtrlBroadcastTrialDist,
 	))
 
-	outs := p.app.FleetOp.Broadcast(context.Background(), b)
+	outs := p.app.FleetOp.Broadcast(ctx, b)
 	for _, out := range outs {
 		members[out.Id] = out.Id
 		if out.Error != nil {
@@ -182,6 +183,19 @@ func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 		}
 	}
 
-	glog.Infof("assigns=%v", assign)
+	b, _ = json.Marshal(internal.NewEvent(
+		cluster.TrialDistInput{Assign: assign},
+		"jupiter/internal",
+		cluster.CtrlBroadcastTrialDist,
+	))
+
+	outs = p.app.FleetOp.Broadcast(ctx, b)
+	for _, out := range outs {
+		members[out.Id] = out.Id
+		if out.Error != nil {
+			glog.Errorf("%v failed: %v", out.Id, out.Error)
+		}
+	}
+
 	conn.WriteString("OK")
 }
