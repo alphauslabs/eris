@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/alphauslabs/jupiter/internal"
 	"github.com/alphauslabs/jupiter/internal/appdata"
 	"github.com/alphauslabs/jupiter/internal/cluster"
 	"github.com/golang/glog"
@@ -141,8 +144,25 @@ func configCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 }
 
 func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
-	glog.Infof("dist: in:key=%v", key)
+	key = "proto/len"
 	v, err := redis.Int(p.cluster.Do(key, [][]byte{[]byte("GET"), []byte("proto/len")}))
 	glog.Infof("%v, %v", v, err)
+
+	members := make(map[string]bool)
+	b, _ := json.Marshal(internal.NewEvent(
+		cluster.TrialDistInput{Assign: map[int]string{0: "node1"}},
+		"jupiter/internal",
+		cluster.CtrlBroadcastTrialDist,
+	))
+
+	outs := p.app.FleetOp.Broadcast(context.Background(), b)
+	for _, out := range outs {
+		members[out.Id] = true
+		if out.Error != nil {
+			glog.Errorf("%v failed: %v", out.Id, out.Error)
+		}
+	}
+
+	glog.Infof("members=%v", members)
 	conn.WriteString("OK")
 }

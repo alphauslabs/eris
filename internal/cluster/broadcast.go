@@ -9,21 +9,21 @@ import (
 	"github.com/golang/glog"
 )
 
-type trialDistInput struct {
+type TrialDistInput struct {
 	Assign map[int]string `json:"assign"`
 }
 
-type trialDistOutput struct {
+type TrialDistOutput struct {
 	Data map[int][]byte `json:"data"`
 }
 
 var (
 	ctrlBroadcastLeaderLiveness = "CTRL_BROADCAST_LEADER_LIVENESS"
-	ctrlBroadcastTrialDist      = "CTRL_BROADCAST_TRIAL_DIST"
+	CtrlBroadcastTrialDist      = "CTRL_BROADCAST_TRIAL_DIST"
 
 	fnBroadcast = map[string]func(*appdata.AppData, *cloudevents.Event) ([]byte, error){
 		ctrlBroadcastLeaderLiveness: doBroadcastLeaderLiveness,
-		ctrlBroadcastTrialDist:      doTrialDist,
+		CtrlBroadcastTrialDist:      doTrialDist,
 	}
 )
 
@@ -49,7 +49,7 @@ func doBroadcastLeaderLiveness(app *appdata.AppData, e *cloudevents.Event) ([]by
 }
 
 func doTrialDist(app *appdata.AppData, e *cloudevents.Event) ([]byte, error) {
-	var in trialDistInput
+	var in TrialDistInput
 	err := json.Unmarshal(e.Data(), &in)
 	if err != nil {
 		glog.Errorf("Unmarshal failed: %v", err)
