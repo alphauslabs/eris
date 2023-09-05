@@ -13,6 +13,7 @@ import (
 	"github.com/alphauslabs/jupiter/internal"
 	"github.com/alphauslabs/jupiter/internal/appdata"
 	"github.com/alphauslabs/jupiter/internal/cluster"
+	"github.com/flowerinthenight/hedge"
 	"github.com/golang/glog"
 	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
@@ -159,17 +160,14 @@ func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	// Get all members in the cluster.
 	members := make(map[string]string)
 	b, _ := json.Marshal(internal.NewEvent(
-		cluster.TrialDistInput{Assign: map[int]string{0: "node1"}}, // dummy
+		hedge.KeyValue{}, // dummy
 		"jupiter/internal",
-		cluster.CtrlBroadcastTrialDist,
+		cluster.CtrlBroadcastEmpty,
 	))
 
 	outs := p.app.FleetOp.Broadcast(ctx, b)
 	for _, out := range outs {
 		members[out.Id] = out.Id
-		if out.Error != nil {
-			glog.Errorf("%v failed: %v", out.Id, out.Error)
-		}
 	}
 
 	glog.Infof("members=%v", members)
@@ -192,9 +190,9 @@ func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	mb := make(map[int][]byte)
 	errs := []error{}
 	b, _ = json.Marshal(internal.NewEvent(
-		cluster.TrialDistInput{Assign: assign},
+		cluster.DistributedGetInput{Assign: assign},
 		"jupiter/internal",
-		cluster.CtrlBroadcastTrialDist,
+		cluster.CtrlBroadcastDistributedGet,
 	))
 
 	outs = p.app.FleetOp.Broadcast(ctx, b)
@@ -203,7 +201,7 @@ func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 		if out.Error != nil {
 			errs = append(errs, out.Error)
 		} else {
-			var o cluster.TrialDistOutput
+			var o cluster.DistributedGetOutput
 			err := json.Unmarshal(out.Reply, &o)
 			if err != nil {
 				errs = append(errs, out.Error)
@@ -215,10 +213,18 @@ func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 		}
 	}
 
+	if len(errs) > 0 {
+		glog.Errorf("failed: %v", errs)
+		conn.WriteError("ERR no cache")
+		return
+	}
+
 	var out bytes.Buffer
 	for i := 0; i < n; i++ {
 		if _, ok := mb[i]; !ok {
-			conn.WriteError("ERR no cache")
+			m := fmt.Sprintf("index %v not found", i)
+			glog.Errorf("failed: %v", m)
+			conn.WriteError("ERR " + m)
 			return
 		}
 
