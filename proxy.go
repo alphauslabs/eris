@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -188,7 +189,8 @@ func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 		}
 	}
 
-	var total int
+	mb := make(map[int][]byte)
+	errs := []error{}
 	b, _ = json.Marshal(internal.NewEvent(
 		cluster.TrialDistInput{Assign: assign},
 		"jupiter/internal",
@@ -199,12 +201,30 @@ func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	for _, out := range outs {
 		members[out.Id] = out.Id
 		if out.Error != nil {
-			glog.Errorf("%v failed: %v", out.Id, out.Error)
+			errs = append(errs, out.Error)
 		} else {
-			total += len(out.Reply)
+			var o cluster.TrialDistOutput
+			err := json.Unmarshal(out.Reply, &o)
+			if err != nil {
+				errs = append(errs, out.Error)
+			} else {
+				for k, v := range o.Data {
+					mb[k] = v
+				}
+			}
 		}
 	}
 
-	glog.Infof("bytes=%v", total)
+	var out bytes.Buffer
+	for i := 0; i < n; i++ {
+		if _, ok := mb[i]; !ok {
+			conn.WriteError("ERR no cache")
+			return
+		}
+
+		out.Write(mb[i])
+	}
+
+	glog.Infof("len=%v, cap=%v", out.Len(), out.Cap())
 	conn.WriteString("OK")
 }
