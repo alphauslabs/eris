@@ -145,24 +145,43 @@ func configCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 
 func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	key = "proto/len"
-	v, err := redis.Int(p.cluster.Do(key, [][]byte{[]byte("GET"), []byte("proto/len")}))
-	glog.Infof("%v, %v", v, err)
+	n, err := redis.Int(p.cluster.Do(key, [][]byte{[]byte("GET"), []byte("proto/len")}))
+	glog.Infof("%v, %v", n, err)
 
-	members := make(map[string]bool)
+	// TODO: Expose member list in hedge.
+	// Get all members in the cluster.
+	members := make(map[string]string)
 	b, _ := json.Marshal(internal.NewEvent(
-		cluster.TrialDistInput{Assign: map[int]string{0: "node1"}},
+		cluster.TrialDistInput{Assign: map[int]string{0: "node1"}}, // dummy
 		"jupiter/internal",
 		cluster.CtrlBroadcastTrialDist,
 	))
 
 	outs := p.app.FleetOp.Broadcast(context.Background(), b)
 	for _, out := range outs {
-		members[out.Id] = true
+		members[out.Id] = out.Id
 		if out.Error != nil {
 			glog.Errorf("%v failed: %v", out.Id, out.Error)
 		}
 	}
 
 	glog.Infof("members=%v", members)
+	var nodes []string
+	for k := range members {
+		nodes = append(nodes, k)
+	}
+
+	// Assign query indeces to all members.
+	assign := make(map[int]string)
+	idx := 0
+	for i := 0; i < n; i++ {
+		assign[i] = nodes[idx]
+		idx++
+		if idx >= len(members) {
+			idx = 0
+		}
+	}
+
+	glog.Infof("assigns=%v", assign)
 	conn.WriteString("OK")
 }

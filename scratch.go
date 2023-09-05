@@ -17,9 +17,10 @@ func (m lmember) String() string { return string(m) }
 
 func test() {
 	if true {
-		ss := []string{"one", "two", "three"}
-		v := fmt.Sprintf("%v", ss[:len(ss)-1])
-		slog.Info(v)
+		var n int
+		n = 5801 / 5
+		slog.Info("assigned:", "n", n)
+		slog.Info("extra:", "mod", 5801%5)
 		return
 	}
 
