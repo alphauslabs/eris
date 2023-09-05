@@ -6,7 +6,7 @@ There is a slight performance penalty over direct connections to Redis due to it
 
 ### Why
 
-The main reason why `jupiter` exists is that at the time of this writing, the maximum Memorystore instance available in GCP is 300GB. Beyond this, we need to create more instances. Instead of leaving the responsibility of accessing multiple Memorystore instances to our applications, it's move convenient to be able to access these clusters of instances as a single entity. After a trial run with [Envoy Redis proxy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_protocols/redis), we wanted something more, especially the ability to add/remove instances seamlessly with minimal interruptions to our client applications. [Redis Ring](https://redis.uptrace.dev/guide/ring.html) was also considered by we wanted more control and flexibility on the control plane side.
+The main reason why `jupiter` exists is that at the time of this writing, the maximum Memorystore instance available in GCP is 300GB. Beyond this, we need to create more instances. Instead of leaving the responsibility of accessing multiple Memorystore instances to our applications, it's move convenient to be able to access these clusters of instances as a single entity. After a trial run with [Envoy Redis proxy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_protocols/redis), we wanted something more, especially the ability to add/remove instances seamlessly with minimal interruptions to our client applications. [Redis Ring](https://redis.uptrace.dev/guide/ring.html) was also considered but we wanted more control and flexibility on the control plane side.
 
 ### Hashing
 
