@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/alphauslabs/jupiter/internal"
 	"github.com/alphauslabs/jupiter/internal/appdata"
@@ -144,6 +145,10 @@ func configCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 }
 
 func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
+	defer func(begin time.Time) {
+		glog.Infof("distTestCmd took %v", time.Since(begin))
+	}(time.Now())
+
 	ctx := context.Background()
 	key = "proto/len"
 	n, err := redis.Int(p.cluster.Do(key, [][]byte{[]byte("GET"), []byte("proto/len")}))
@@ -183,6 +188,7 @@ func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 		}
 	}
 
+	var total int
 	b, _ = json.Marshal(internal.NewEvent(
 		cluster.TrialDistInput{Assign: assign},
 		"jupiter/internal",
@@ -194,8 +200,11 @@ func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 		members[out.Id] = out.Id
 		if out.Error != nil {
 			glog.Errorf("%v failed: %v", out.Id, out.Error)
+		} else {
+			total += len(out.Reply)
 		}
 	}
 
+	glog.Infof("bytes=%v", total)
 	conn.WriteString("OK")
 }

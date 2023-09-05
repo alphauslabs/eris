@@ -15,16 +15,26 @@ import (
 	gaxv2 "github.com/googleapis/gax-go/v2"
 )
 
+type ClusterData struct {
+	App       *appdata.AppData
+	Cluster   *Cluster
+	ClusterOk int32 // Cluster is working if > 0
+}
+
 var (
 	ctrlPingPong = "CTRL_PING_PONG"
 
-	fnLeader = map[string]func(*appdata.AppData, *cloudevents.Event) ([]byte, error){
+	fnLeader = map[string]func(*ClusterData, *cloudevents.Event) ([]byte, error){
 		ctrlPingPong: doLeaderPingPong,
 	}
 )
 
 func LeaderHandler(data interface{}, msg []byte) ([]byte, error) {
-	app := data.(*appdata.AppData)
+	cd := data.(*ClusterData)
+	if atomic.LoadInt32(&cd.ClusterOk) == 0 {
+		return nil, fmt.Errorf("failed: cluster not running (yet)")
+	}
+
 	var e cloudevents.Event
 	err := json.Unmarshal(msg, &e)
 	if err != nil {
@@ -36,10 +46,10 @@ func LeaderHandler(data interface{}, msg []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed: unsupported type: %v", e.Type())
 	}
 
-	return fnLeader[e.Type()](app, &e)
+	return fnLeader[e.Type()](cd, &e)
 }
 
-func doLeaderPingPong(app *appdata.AppData, e *cloudevents.Event) ([]byte, error) {
+func doLeaderPingPong(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 	switch {
 	case string(e.Data()) != "PING":
 		return nil, fmt.Errorf("invalid message")

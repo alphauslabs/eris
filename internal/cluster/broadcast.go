@@ -3,10 +3,13 @@ package cluster
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
+	"sync/atomic"
+	"time"
 
-	"github.com/alphauslabs/jupiter/internal/appdata"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/golang/glog"
+	"github.com/gomodule/redigo/redis"
 )
 
 type TrialDistInput struct {
@@ -21,14 +24,14 @@ var (
 	ctrlBroadcastLeaderLiveness = "CTRL_BROADCAST_LEADER_LIVENESS"
 	CtrlBroadcastTrialDist      = "CTRL_BROADCAST_TRIAL_DIST"
 
-	fnBroadcast = map[string]func(*appdata.AppData, *cloudevents.Event) ([]byte, error){
+	fnBroadcast = map[string]func(*ClusterData, *cloudevents.Event) ([]byte, error){
 		ctrlBroadcastLeaderLiveness: doBroadcastLeaderLiveness,
 		CtrlBroadcastTrialDist:      doTrialDist,
 	}
 )
 
 func BroadcastHandler(data interface{}, msg []byte) ([]byte, error) {
-	app := data.(*appdata.AppData)
+	cd := data.(*ClusterData)
 	var e cloudevents.Event
 	err := json.Unmarshal(msg, &e)
 	if err != nil {
@@ -40,15 +43,19 @@ func BroadcastHandler(data interface{}, msg []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed: unsupported type: %v", e.Type())
 	}
 
-	return fnBroadcast[e.Type()](app, &e)
+	return fnBroadcast[e.Type()](cd, &e)
 }
 
-func doBroadcastLeaderLiveness(app *appdata.AppData, e *cloudevents.Event) ([]byte, error) {
-	app.LeaderActive.On()
+func doBroadcastLeaderLiveness(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
+	cd.App.LeaderActive.On()
 	return nil, nil
 }
 
-func doTrialDist(app *appdata.AppData, e *cloudevents.Event) ([]byte, error) {
+func doTrialDist(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
+	defer func(begin time.Time) {
+		glog.Infof("doTrialDist took %v", time.Since(begin))
+	}(time.Now())
+
 	var in TrialDistInput
 	err := json.Unmarshal(e.Data(), &in)
 	if err != nil {
@@ -56,10 +63,40 @@ func doTrialDist(app *appdata.AppData, e *cloudevents.Event) ([]byte, error) {
 		return nil, err
 	}
 
+	var on int32
+	var w sync.WaitGroup
+	var m sync.Mutex
+	mb := make(map[int][]byte)
+	me := make(map[int]error)
+
 	for k, v := range in.Assign {
-		if v == app.FleetOp.Name() {
-			glog.Infof("%d is assigned to me (%v)", k, app.FleetOp.Name())
+		if v == cd.App.FleetOp.Name() {
+			atomic.AddInt32(&on, 1)
+			glog.Infof("%d is assigned to me (%v)", k, cd.App.FleetOp.Name())
+			w.Add(1)
+			go func(idx int) {
+				defer w.Done()
+				key := fmt.Sprintf("proto/%v", idx)
+				v, err := redis.Bytes(cd.Cluster.Do(key, [][]byte{[]byte("GET"), []byte(key)}))
+				if err != nil {
+					m.Lock()
+					me[idx] = fmt.Errorf("GET [%v] failed: %v", key, err)
+					m.Unlock()
+					return
+				}
+
+				m.Lock()
+				mb[idx] = v
+				m.Unlock()
+			}(k)
 		}
+	}
+
+	if atomic.LoadInt32(&on) > 0 {
+		w.Wait()
+		out := TrialDistOutput{Data: mb}
+		b, _ := json.Marshal(out)
+		return b, nil
 	}
 
 	return nil, nil

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -89,6 +90,7 @@ func main() {
 	}
 
 	defer app.Client.Close()
+	clusterData := cluster.ClusterData{App: app}
 
 	// Setup our group coordinator.
 	app.FleetOp = hedge.New(
@@ -98,8 +100,8 @@ func main() {
 		"jupiter",
 		"jupiter_store",
 		hedge.WithGroupSyncInterval(time.Second*10),
-		hedge.WithLeaderHandler(app, cluster.LeaderHandler),
-		hedge.WithBroadcastHandler(app, cluster.BroadcastHandler),
+		hedge.WithLeaderHandler(clusterData, cluster.LeaderHandler),
+		hedge.WithBroadcastHandler(clusterData, cluster.BroadcastHandler),
 	)
 
 	done := make(chan error)
@@ -137,6 +139,9 @@ func main() {
 	if err != nil {
 		glog.Fatal(err) // so we will know
 	}
+
+	clusterData.Cluster = rcluster
+	atomic.StoreInt32(&clusterData.ClusterOk, 1)
 
 	// Setup our gRPC management API.
 	go func() {
