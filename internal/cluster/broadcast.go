@@ -9,11 +9,21 @@ import (
 	"github.com/golang/glog"
 )
 
+type trialDistInput struct {
+	Assign map[int]string `json:"assign"`
+}
+
+type trialDistOutput struct {
+	Data map[int][]byte `json:"data"`
+}
+
 var (
 	ctrlBroadcastLeaderLiveness = "CTRL_BROADCAST_LEADER_LIVENESS"
+	ctrlBroadcastTrialDist      = "CTRL_BROADCAST_TRIAL_DIST"
 
 	fnBroadcast = map[string]func(*appdata.AppData, *cloudevents.Event) ([]byte, error){
 		ctrlBroadcastLeaderLiveness: doBroadcastLeaderLiveness,
+		ctrlBroadcastTrialDist:      doTrialDist,
 	}
 )
 
@@ -35,5 +45,22 @@ func BroadcastHandler(data interface{}, msg []byte) ([]byte, error) {
 
 func doBroadcastLeaderLiveness(app *appdata.AppData, e *cloudevents.Event) ([]byte, error) {
 	app.LeaderActive.On()
+	return nil, nil
+}
+
+func doTrialDist(app *appdata.AppData, e *cloudevents.Event) ([]byte, error) {
+	var in trialDistInput
+	err := json.Unmarshal(e.Data(), &in)
+	if err != nil {
+		glog.Errorf("Unmarshal failed: %v", err)
+		return nil, err
+	}
+
+	for k, v := range in.Assign {
+		if v == app.FleetOp.Name() {
+			glog.Infof("%d is assigned to me (%v)", k, app.FleetOp.Name())
+		}
+	}
+
 	return nil, nil
 }

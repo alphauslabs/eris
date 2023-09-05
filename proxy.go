@@ -9,6 +9,7 @@ import (
 	"github.com/alphauslabs/jupiter/internal/appdata"
 	"github.com/alphauslabs/jupiter/internal/cluster"
 	"github.com/golang/glog"
+	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
 	"github.com/tidwall/redcon"
 )
@@ -19,10 +20,11 @@ var (
 	ps    redcon.PubSub
 
 	cmds = map[string]func(redcon.Conn, redcon.Command, string, *proxy){
-		"detach": detachCmd,
-		"ping":   pingCmd,
-		"quit":   quitCmd,
-		"config": configCmd,
+		"detach":   detachCmd,
+		"ping":     pingCmd,
+		"quit":     quitCmd,
+		"config":   configCmd,
+		"disttest": distTestCmd,
 	}
 )
 
@@ -136,4 +138,11 @@ func configCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	conn.WriteArray(2)
 	conn.WriteBulk(cmd.Args[2])
 	conn.WriteBulkString("")
+}
+
+func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
+	glog.Infof("dist: in:key=%v", key)
+	v, err := redis.Int(p.cluster.Do(key, [][]byte{[]byte("GET"), []byte("proto/len")}))
+	glog.Infof("%v, %v", v, err)
+	conn.WriteString("OK")
 }
