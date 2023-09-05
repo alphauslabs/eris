@@ -100,8 +100,8 @@ func main() {
 		"jupiter",
 		"jupiter_store",
 		hedge.WithGroupSyncInterval(time.Second*10),
-		hedge.WithLeaderHandler(clusterData, cluster.LeaderHandler),
-		hedge.WithBroadcastHandler(clusterData, cluster.BroadcastHandler),
+		hedge.WithLeaderHandler(&clusterData, cluster.LeaderHandler),
+		hedge.WithBroadcastHandler(&clusterData, cluster.BroadcastHandler),
 	)
 
 	done := make(chan error)

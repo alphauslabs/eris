@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/alphauslabs/jupiter/internal/flags"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/golang/glog"
 	"github.com/gomodule/redigo/redis"
@@ -68,6 +69,7 @@ func doTrialDist(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 	var m sync.Mutex
 	mb := make(map[int][]byte)
 	me := make(map[int]error)
+	concurrent := make(chan struct{}, *flags.MaxActive) // concurrent read limit
 
 	for k, v := range in.Assign {
 		if v == cd.App.FleetOp.Name() {
@@ -75,7 +77,12 @@ func doTrialDist(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 			glog.Infof("%d is assigned to me (%v)", k, cd.App.FleetOp.Name())
 			w.Add(1)
 			go func(idx int) {
-				defer w.Done()
+				concurrent <- struct{}{}
+				defer func() {
+					<-concurrent
+					w.Done()
+				}()
+
 				key := fmt.Sprintf("proto/%v", idx)
 				v, err := redis.Bytes(cd.Cluster.Do(key, [][]byte{[]byte("GET"), []byte(key)}))
 				if err != nil {
