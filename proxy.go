@@ -26,11 +26,11 @@ var (
 	ps    redcon.PubSub
 
 	cmds = map[string]func(redcon.Conn, redcon.Command, string, *proxy){
-		"detach":   detachCmd,
-		"ping":     pingCmd,
-		"quit":     quitCmd,
-		"config":   configCmd,
-		"disttest": distTestCmd,
+		"detach":  detachCmd,
+		"ping":    pingCmd,
+		"quit":    quitCmd,
+		"config":  configCmd,
+		"distget": distGetCmd,
 	}
 )
 
@@ -146,15 +146,18 @@ func configCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	conn.WriteBulkString("")
 }
 
-func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
+func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	defer func(begin time.Time) {
-		glog.Infof("distTestCmd took %v", time.Since(begin))
+		glog.Infof("distGetCmd took %v", time.Since(begin))
 	}(time.Now())
 
 	ctx := context.Background()
 	key = "proto/len"
 	n, err := redis.Int(p.cluster.Do(key, [][]byte{[]byte("GET"), []byte("proto/len")}))
-	glog.Infof("%v, %v", n, err)
+	if err != nil {
+		conn.WriteError("ERR " + err.Error())
+		return
+	}
 
 	// TODO: Expose member list in hedge.
 	// Get all members in the cluster.
@@ -177,13 +180,13 @@ func distTestCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	}
 
 	// Assign query indeces to all members.
+	loc := 0
 	assign := make(map[int]string)
-	idx := 0
 	for i := 0; i < n; i++ {
-		assign[i] = nodes[idx]
-		idx++
-		if idx >= len(members) {
-			idx = 0
+		assign[i] = nodes[loc]
+		loc++
+		if loc >= len(members) {
+			loc = 0
 		}
 	}
 
