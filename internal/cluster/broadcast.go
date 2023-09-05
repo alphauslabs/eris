@@ -1,4 +1,4 @@
-package fleet
+package cluster
 
 import (
 	"encoding/json"

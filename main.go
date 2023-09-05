@@ -15,7 +15,6 @@ import (
 	"github.com/alphauslabs/jupiter/internal/appdata"
 	"github.com/alphauslabs/jupiter/internal/cluster"
 	"github.com/alphauslabs/jupiter/internal/flags"
-	"github.com/alphauslabs/jupiter/internal/fleet"
 	rl "github.com/alphauslabs/jupiter/internal/ratelimit"
 	v1 "github.com/alphauslabs/jupiter/proto/v1"
 	"github.com/flowerinthenight/hedge"
@@ -89,6 +88,8 @@ func main() {
 		glog.Fatal(err) // essential
 	}
 
+	defer app.Client.Close()
+
 	// Setup our group coordinator.
 	app.FleetOp = hedge.New(
 		app.Client,
@@ -97,8 +98,8 @@ func main() {
 		"jupiter",
 		"jupiter_store",
 		hedge.WithGroupSyncInterval(time.Second*10),
-		hedge.WithLeaderHandler(app, fleet.LeaderHandler),
-		hedge.WithBroadcastHandler(app, fleet.BroadcastHandler),
+		hedge.WithLeaderHandler(app, cluster.LeaderHandler),
+		hedge.WithBroadcastHandler(app, cluster.BroadcastHandler),
 	)
 
 	done := make(chan error)
@@ -113,7 +114,7 @@ func main() {
 		}(&m, time.Now())
 
 		glog.Infof("attempt leader wait...")
-		ok, err := fleet.EnsureLeaderActive(cctx(ctx), app)
+		ok, err := cluster.EnsureLeaderActive(cctx(ctx), app)
 		switch {
 		case !ok:
 			m = fmt.Sprintf("failed: %v, no leader after", err)
@@ -122,7 +123,7 @@ func main() {
 		}
 	}()
 
-	go fleet.LeaderLiveness(cctx(ctx), app)
+	go cluster.LeaderLiveness(cctx(ctx), app)
 
 	// Setup our cluster of Redis nodes.
 	rcluster := cluster.NewCluster()
@@ -153,6 +154,8 @@ func main() {
 		func(conn redcon.Conn, err error) {},
 	)
 
+	defer rclone.Close()
+
 	go func() {
 		glog.Infof("start redis proxy at %s", addr)
 		err := rclone.ListenAndServe()
@@ -177,6 +180,4 @@ func main() {
 
 	<-done
 	<-doneLock
-	rclone.Close()
-	app.Client.Close()
 }
