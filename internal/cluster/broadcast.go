@@ -13,7 +13,12 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
+const (
+	EventSource = "jupiter/internal"
+)
+
 type DistributedGetInput struct {
+	Name   string         `json:"name"`
 	Assign map[int]string `json:"assign"`
 }
 
@@ -22,13 +27,13 @@ type DistributedGetOutput struct {
 }
 
 var (
-	CtrlBroadcastEmpty          = "CTRL_BROADCAST_EMPTY"
 	CtrlBroadcastLeaderLiveness = "CTRL_BROADCAST_LEADER_LIVENESS"
+	CtrlBroadcastEmpty          = "CTRL_BROADCAST_EMPTY"
 	CtrlBroadcastDistributedGet = "CTRL_BROADCAST_DISTRIBUTED_GET"
 
 	fnBroadcast = map[string]func(*ClusterData, *cloudevents.Event) ([]byte, error){
-		CtrlBroadcastEmpty:          doBroadcastEmpty,
 		CtrlBroadcastLeaderLiveness: doBroadcastLeaderLiveness,
+		CtrlBroadcastEmpty:          doBroadcastEmpty,
 		CtrlBroadcastDistributedGet: doDistributedGet,
 	}
 )
@@ -49,14 +54,14 @@ func BroadcastHandler(data interface{}, msg []byte) ([]byte, error) {
 	return fnBroadcast[e.Type()](cd, &e)
 }
 
-// doBroadcastEmpty does nothing, actually. At the moment, used to gather all member info.
-// TODO: It's better if hedge exposes the member list function instead of this.
-func doBroadcastEmpty(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
+func doBroadcastLeaderLiveness(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
+	cd.App.LeaderActive.On()
 	return nil, nil
 }
 
-func doBroadcastLeaderLiveness(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
-	cd.App.LeaderActive.On()
+// doBroadcastEmpty does nothing, actually. At the moment, used to gather all member info.
+// TODO: It's better if hedge exposes the member list function instead of this.
+func doBroadcastEmpty(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 	return nil, nil
 }
 
@@ -72,7 +77,7 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 		return nil, err
 	}
 
-	var on int32
+	var assigned int32
 	var w sync.WaitGroup
 	var m sync.Mutex
 	mb := make(map[int][]byte)
@@ -80,7 +85,7 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 	concurrent := make(chan struct{}, *flags.MaxActive) // concurrent read limit
 	for k, v := range in.Assign {
 		if v == cd.App.FleetOp.Name() {
-			atomic.AddInt32(&on, 1)
+			atomic.AddInt32(&assigned, 1)
 			w.Add(1)
 			go func(idx int) {
 				concurrent <- struct{}{}
@@ -89,7 +94,7 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 					w.Done()
 				}()
 
-				key := fmt.Sprintf("proto/%v", idx)
+				key := fmt.Sprintf("%v/%v", in.Name, idx)
 				v, err := redis.Bytes(cd.Cluster.Do(key, [][]byte{[]byte("GET"), []byte(key)}))
 				if err != nil {
 					m.Lock()
@@ -105,8 +110,14 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 		}
 	}
 
-	if atomic.LoadInt32(&on) > 0 {
+	if atomic.LoadInt32(&assigned) > 0 {
 		w.Wait()
+		for _, v := range me {
+			if v != nil {
+				return nil, v
+			}
+		}
+
 		out := DistributedGetOutput{Data: mb}
 		b, _ := json.Marshal(out)
 		return b, nil

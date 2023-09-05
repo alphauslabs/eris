@@ -26,11 +26,11 @@ var (
 	ps    redcon.PubSub
 
 	cmds = map[string]func(redcon.Conn, redcon.Command, string, *proxy){
-		"detach":  detachCmd,
 		"ping":    pingCmd,
+		"distget": distGetCmd,
+		"detach":  detachCmd,
 		"quit":    quitCmd,
 		"config":  configCmd,
-		"distget": distGetCmd,
 	}
 )
 
@@ -106,16 +106,6 @@ func newProxy(app *appdata.AppData, c *cluster.Cluster) *proxy {
 	return &proxy{app: app, cluster: c}
 }
 
-func detachCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
-	hconn := conn.Detach()
-	glog.Info("connection has been detached")
-	go func() {
-		defer hconn.Close()
-		hconn.WriteString("OK")
-		hconn.Flush()
-	}()
-}
-
 func pingCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	switch {
 	case key != "":
@@ -133,38 +123,26 @@ func pingCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	// pprof.StopCPUProfile()
 }
 
-func quitCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
-	conn.WriteString("OK")
-	conn.Close()
-}
-
-func configCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
-	// This simple (blank) response is only here to allow for the
-	// redis-benchmark command to work with this clone.
-	conn.WriteArray(2)
-	conn.WriteBulk(cmd.Args[2])
-	conn.WriteBulkString("")
-}
-
 func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	defer func(begin time.Time) {
 		glog.Infof("distGetCmd took %v", time.Since(begin))
 	}(time.Now())
 
 	ctx := context.Background()
-	key = "proto/len"
-	n, err := redis.Int(p.cluster.Do(key, [][]byte{[]byte("GET"), []byte("proto/len")}))
+	key = string(cmd.Args[1])
+	keyLen := fmt.Sprintf("%v/len", key)
+	n, err := redis.Int(p.cluster.Do(key, [][]byte{[]byte("GET"), []byte(keyLen)}))
 	if err != nil {
 		conn.WriteError("ERR " + err.Error())
 		return
 	}
 
 	// TODO: Expose member list in hedge.
-	// Get all members in the cluster.
+	// For now, get all members in the cluster via empty broadcast.
 	members := make(map[string]string)
 	b, _ := json.Marshal(internal.NewEvent(
 		hedge.KeyValue{}, // dummy
-		"jupiter/internal",
+		cluster.EventSource,
 		cluster.CtrlBroadcastEmpty,
 	))
 
@@ -193,11 +171,13 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	mb := make(map[int][]byte)
 	errs := []error{}
 	b, _ = json.Marshal(internal.NewEvent(
-		cluster.DistributedGetInput{Assign: assign},
-		"jupiter/internal",
+		cluster.DistributedGetInput{Name: key, Assign: assign},
+		cluster.EventSource,
 		cluster.CtrlBroadcastDistributedGet,
 	))
 
+	// Send out GET assignments to all members; wait for reply.
+	// TODO: How to handle any member failing? For now, fail all.
 	outs = p.app.FleetOp.Broadcast(ctx, b)
 	for _, out := range outs {
 		members[out.Id] = out.Id
@@ -235,5 +215,28 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	}
 
 	glog.Infof("len=%v, cap=%v", out.Len(), out.Cap())
+	conn.WriteAny(out.Bytes())
+}
+
+func detachCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
+	hconn := conn.Detach()
+	glog.Info("connection has been detached")
+	go func() {
+		defer hconn.Close()
+		hconn.WriteString("OK")
+		hconn.Flush()
+	}()
+}
+
+func quitCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	conn.WriteString("OK")
+	conn.Close()
+}
+
+func configCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
+	// This simple (blank) response is only here to allow for the
+	// redis-benchmark command to work with this clone.
+	conn.WriteArray(2)
+	conn.WriteBulk(cmd.Args[2])
+	conn.WriteBulkString("")
 }
