@@ -85,7 +85,6 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 	concurrent := make(chan struct{}, *flags.MaxActive) // concurrent read limit
 	for k, v := range in.Assign {
 		if v == cd.App.FleetOp.Name() {
-			atomic.AddInt32(&assigned, 1)
 			w.Add(1)
 			go func(idx int) {
 				concurrent <- struct{}{}
@@ -94,6 +93,7 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 					w.Done()
 				}()
 
+				atomic.AddInt32(&assigned, 1)
 				key := fmt.Sprintf("%v/%v", in.Name, idx)
 				v, err := redis.Bytes(cd.Cluster.Do(key, [][]byte{[]byte("GET"), []byte(key)}))
 				if err != nil {
