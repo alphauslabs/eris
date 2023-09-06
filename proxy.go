@@ -123,6 +123,15 @@ func pingCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	// pprof.StopCPUProfile()
 }
 
+// distGetCmd is a very naive implementation of a distributed GET. It tries to get
+// the current list of active nodes (not Redis) in the cluster, distribute the GET
+// load to all of them (including the node that received the call), and wait for
+// all responses. Trouble is, this is deployed as a Deployment in k8s, where pods
+// are quite volatile, so chances of pods not being available at call time, or
+// disappearing mid processing is quite high. Probably need to look at deploying
+// this as MIGs in GCP, that could be a slightly more stable environment for this
+// kind of load distribution. At the moment, the HPA for this deployment is set
+// with min = max, so at least the scale up/down is relatively fixed.
 func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	defer func(begin time.Time) {
 		glog.Infof("distGetCmd took %v", time.Since(begin))
