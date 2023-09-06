@@ -27,6 +27,8 @@ type DistributedGetOutput struct {
 }
 
 var (
+	ErrClusterOffline = fmt.Errorf("failed: cluster not running")
+
 	CtrlBroadcastLeaderLiveness = "CTRL_BROADCAST_LEADER_LIVENESS"
 	CtrlBroadcastEmpty          = "CTRL_BROADCAST_EMPTY"
 	CtrlBroadcastDistributedGet = "CTRL_BROADCAST_DISTRIBUTED_GET"
@@ -40,6 +42,10 @@ var (
 
 func BroadcastHandler(data interface{}, msg []byte) ([]byte, error) {
 	cd := data.(*ClusterData)
+	if atomic.LoadInt32(&cd.ClusterOk) == 0 {
+		return nil, ErrClusterOffline
+	}
+
 	var e cloudevents.Event
 	err := json.Unmarshal(msg, &e)
 	if err != nil {

@@ -32,7 +32,7 @@ var (
 func LeaderHandler(data interface{}, msg []byte) ([]byte, error) {
 	cd := data.(*ClusterData)
 	if atomic.LoadInt32(&cd.ClusterOk) == 0 {
-		return nil, fmt.Errorf("failed: cluster not running (yet)")
+		return nil, ErrClusterOffline
 	}
 
 	var e cloudevents.Event
