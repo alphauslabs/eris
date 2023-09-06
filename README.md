@@ -101,3 +101,7 @@ if err != nil {
 ### Limitations
 
 Pipelining and transactions are not supported as `jupiter` doesn't guarantee the use of a single connection for multiple, related commands (i.e. `MULTI`, `...`, `EXEC`), even if the same hash key is provided. We might support these in future versions.
+
+### Notes
+
+`jupiter` is a very GCP-centric system; it uses [`hedge`](https://github.com/flowerinthenight/hedge) as its cluster coordinator which requires [Cloud Spanner](https://cloud.google.com/spanner).
