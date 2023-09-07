@@ -133,9 +133,12 @@ func pingCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 // kind of load distribution. At the moment, the HPA for this deployment is set
 // with min = max, so at least the scale up/down is relatively fixed.
 func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
-	defer func(begin time.Time) {
-		glog.Infof("distGetCmd took %v", time.Since(begin))
-	}(time.Now())
+	var line string
+	defer func(begin time.Time, m *string) {
+		if *m != "" {
+			glog.Infof("[distGetCmd] %v, took %v", *m, time.Since(begin))
+		}
+	}(time.Now(), &line)
 
 	glog.Infof("initiator=%v, args[0]=%v, args[1]=%v",
 		p.app.FleetOp.Name(),
@@ -165,8 +168,6 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	for _, out := range outs {
 		members[out.Id] = out.Id
 	}
-
-	glog.Infof("len(chunks)=%v, members=%v", n, members)
 
 	var nodes []string
 	for k := range members {
@@ -230,7 +231,9 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 		out.Write(mb[i])
 	}
 
-	glog.Infof("len=%v, cap=%v", out.Len(), out.Cap())
+	line = fmt.Sprintf("key=%v, chunks=%v, len=%v, cap=%v",
+		key, n, out.Len(), out.Cap())
+
 	conn.WriteAny(out.Bytes())
 }
 
