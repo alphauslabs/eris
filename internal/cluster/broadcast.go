@@ -135,7 +135,7 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 		}
 
 		sort.Strings(ids)
-		line = fmt.Sprintf("%v:%v:[%v]", in.Name, len(ids), strings.Join(ids, ","))
+		line = fmt.Sprintf("%v/%v:[%v]", in.Name, len(ids), strings.Join(ids, ","))
 		out := DistributedGetOutput{Data: mb}
 		b, _ := json.Marshal(out)
 		return b, nil
