@@ -140,12 +140,6 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 		}
 	}(time.Now(), &line)
 
-	glog.Infof("initiator=%v, args[0]=%v, args[1]=%v",
-		p.app.FleetOp.Name(),
-		string(cmd.Args[0]),
-		string(cmd.Args[1]),
-	)
-
 	ctx := context.Background()
 	key = string(cmd.Args[1])
 	keyLen := fmt.Sprintf("%v/len", key)
