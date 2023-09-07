@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -128,13 +129,13 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 			}
 		}
 
-		ids := []int{}
+		ids := []string{}
 		for k := range mb {
-			ids = append(ids, k)
+			ids = append(ids, fmt.Sprintf("%v", k))
 		}
 
-		sort.Ints(ids)
-		line = fmt.Sprintf("%v:%v", in.Name, ids)
+		sort.Strings(ids)
+		line = fmt.Sprintf("%v:%v:%v", in.Name, len(ids), strings.Join(ids, ","))
 		out := DistributedGetOutput{Data: mb}
 		b, _ := json.Marshal(out)
 		return b, nil
