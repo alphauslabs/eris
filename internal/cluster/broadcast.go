@@ -3,6 +3,7 @@ package cluster
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -72,9 +73,12 @@ func doBroadcastEmpty(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 }
 
 func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
-	defer func(begin time.Time) {
-		glog.Infof("doDistributedGet took %v", time.Since(begin))
-	}(time.Now())
+	var line string
+	defer func(begin time.Time, m *string) {
+		if *m != "" {
+			glog.Infof("[doDistributedGet] %v, took %v", *m, time.Since(begin))
+		}
+	}(time.Now(), &line)
 
 	var in DistributedGetInput
 	err := json.Unmarshal(e.Data(), &in)
@@ -124,6 +128,13 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 			}
 		}
 
+		ids := []int{}
+		for k := range mb {
+			ids = append(ids, k)
+		}
+
+		sort.Ints(ids)
+		line = fmt.Sprintf("%v:%v", in.Name, ids)
 		out := DistributedGetOutput{Data: mb}
 		b, _ := json.Marshal(out)
 		return b, nil
