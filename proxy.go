@@ -136,15 +136,10 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	var line string
 	defer func(begin time.Time, m *string) {
 		if *m != "" {
-			glog.Infof("[distGetCmd] %v, took %v", *m, time.Since(begin))
+			glog.Infof("[%v/distGetCmd] %v, took %v",
+				p.app.FleetOp.Name(), *m, time.Since(begin))
 		}
 	}(time.Now(), &line)
-
-	glog.Infof("initiator=%v, args[0]=%v, args[1]=%v",
-		p.app.FleetOp.Name(),
-		string(cmd.Args[0]),
-		string(cmd.Args[1]),
-	)
 
 	ctx := context.Background()
 	key = string(cmd.Args[1])

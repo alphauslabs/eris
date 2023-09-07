@@ -77,7 +77,8 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 	var line string
 	defer func(begin time.Time, m *string) {
 		if *m != "" {
-			glog.Infof("[doDistributedGet] %v, took %v", *m, time.Since(begin))
+			glog.Infof("[%v/doDistributedGet] %v, took %v",
+				cd.App.FleetOp.Name(), *m, time.Since(begin))
 		}
 	}(time.Now(), &line)
 
@@ -135,7 +136,7 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 		}
 
 		sort.Strings(ids)
-		line = fmt.Sprintf("%v:%v:[%v]", in.Name, len(ids), strings.Join(ids, ","))
+		line = fmt.Sprintf("%v/%v:[%v]", in.Name, len(ids), strings.Join(ids, ","))
 		out := DistributedGetOutput{Data: mb}
 		b, _ := json.Marshal(out)
 		return b, nil
