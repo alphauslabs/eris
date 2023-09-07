@@ -96,9 +96,9 @@ func main() {
 	app.FleetOp = hedge.New(
 		app.Client,
 		":8081",
-		"jupiter_lock",
-		"jupiter",
-		"jupiter_store",
+		*flags.LockTable,
+		*flags.LockName,
+		*flags.LogTable,
 		hedge.WithGroupSyncInterval(time.Second*10),
 		hedge.WithLeaderHandler(&clusterData, cluster.LeaderHandler),
 		hedge.WithBroadcastHandler(&clusterData, cluster.BroadcastHandler),
