@@ -95,28 +95,8 @@ func (p *proxy) Handler(conn redcon.Conn, cmd redcon.Command) {
 
 	v, err := p.cluster.Do(key, ncmd.Args)
 	if err != nil {
-		glog.Errorf("cluster.Do failed: %v: %v", key, err)
 		conn.WriteError(err.Error())
 	} else {
-		args := []string{}
-		for _, a := range ncmd.Args {
-			args = append(args, string(a))
-		}
-
-		var sfx string
-		if strings.HasSuffix(key, "len") {
-			_, ok := v.(string)
-			if ok {
-				sfx = fmt.Sprintf("n=%v", v.(string))
-			}
-		} else {
-			_, ok := v.(string)
-			if ok {
-				sfx = fmt.Sprintf("len=%v", len(v.(string)))
-			}
-		}
-
-		glog.Infof("dbg: cluster.Do for key=%v, args=%v, outtype=%T, sfx=%v", key, args, v, sfx)
 		conn.WriteAny(v)
 	}
 }
@@ -165,7 +145,7 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	}
 
 	ctx := context.Background()
-	nkey := string(cmd.Args[1])
+	nkey := string(cmd.Args[1]) // 'key' arg not used here
 	keyLen := fmt.Sprintf("%v/len", nkey)
 	r, err := p.cluster.Do(keyLen, [][]byte{[]byte("GET"), []byte(keyLen)})
 	if err != nil {
@@ -199,7 +179,6 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	}
 
 	if n == 0 {
-		glog.Errorf("failed: %v: n=0, no data", keyLen)
 		conn.WriteError("ERR no data")
 		return
 	}
@@ -263,7 +242,6 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	}
 
 	if len(errs) > 0 {
-		glog.Errorf("failed: %v", errs)
 		conn.WriteError("ERR no cache")
 		return
 	}
@@ -280,7 +258,7 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	}
 
 	line = fmt.Sprintf("key=%v, chunks=%v, len=%v, cap=%v",
-		key, n, out.Len(), out.Cap())
+		nkey, n, out.Len(), out.Cap())
 
 	conn.WriteAny(out.Bytes())
 }
