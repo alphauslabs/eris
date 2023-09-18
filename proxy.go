@@ -165,7 +165,8 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	}
 
 	ctx := context.Background()
-	keyLen := fmt.Sprintf("%v/len", string(cmd.Args[1]))
+	nkey := string(cmd.Args[1])
+	keyLen := fmt.Sprintf("%v/len", nkey)
 	r, err := p.cluster.Do(keyLen, [][]byte{[]byte("GET"), []byte(keyLen)})
 	if err != nil {
 		conn.WriteError("ERR " + err.Error())
@@ -195,8 +196,6 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 			return
 		}
 		n = x
-	default:
-		glog.Infof("%v: unsupported type: %v", keyLen, r)
 	}
 
 	if n == 0 {
@@ -238,7 +237,7 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	mb := make(map[int][]byte)
 	errs := []error{}
 	b, _ = json.Marshal(internal.NewEvent(
-		cluster.DistributedGetInput{Name: key, Assign: assign},
+		cluster.DistributedGetInput{Name: nkey, Assign: assign},
 		cluster.EventSource,
 		cluster.CtrlBroadcastDistributedGet,
 	))
