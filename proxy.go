@@ -103,7 +103,20 @@ func (p *proxy) Handler(conn redcon.Conn, cmd redcon.Command) {
 			args = append(args, string(a))
 		}
 
-		glog.Infof("dbg: cluster.Do for key=%v, args=%v, type=%T", key, args, v)
+		var sfx string
+		if strings.HasSuffix(key, "len") {
+			_, ok := v.(string)
+			if ok {
+				sfx = fmt.Sprintf("n=%v", v.(string))
+			}
+		} else {
+			_, ok := v.(string)
+			if ok {
+				sfx = fmt.Sprintf("len=%v", len(v.(string)))
+			}
+		}
+
+		glog.Infof("dbg: cluster.Do for key=%v, args=%v, outtype=%T, sfx=%v", key, args, v, sfx)
 		conn.WriteAny(v)
 	}
 }
