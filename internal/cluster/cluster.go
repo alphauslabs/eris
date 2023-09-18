@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -8,8 +9,8 @@ import (
 	"github.com/alphauslabs/jupiter/internal/flags"
 	"github.com/buraksezer/consistent"
 	"github.com/golang/glog"
-	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
+	goredisv9 "github.com/redis/go-redis/v9"
 )
 
 type cmember string
@@ -27,10 +28,10 @@ type rcmd struct {
 func (rc *rcmd) String() string { return fmt.Sprintf("%v %v", rc.cmd, rc.args) }
 
 type member struct {
-	host  string // fmt: host:port
-	pool  *redis.Pool
-	queue chan *rcmd
-	done  sync.WaitGroup
+	host   string // fmt: host:port
+	client *goredisv9.Client
+	queue  chan *rcmd
+	done   sync.WaitGroup
 }
 
 type Cluster struct {
@@ -45,14 +46,13 @@ func (m *Cluster) AddMember(host string) {
 	if _, found := m.members[host]; !found {
 		m.members[host] = &member{
 			host: host,
-			pool: &redis.Pool{
-				MaxIdle:     *flags.MaxIdle,
-				MaxActive:   *flags.MaxActive,
-				IdleTimeout: 240 * time.Second,
-				Dial: func() (redis.Conn, error) {
-					return redis.Dial("tcp", host)
-				},
-			},
+			client: goredisv9.NewClient(&goredisv9.Options{
+				Addr:         host,
+				MaxRetries:   -1, // don't retry
+				PoolTimeout:  time.Minute * 3,
+				ReadTimeout:  time.Minute * 2,
+				WriteTimeout: time.Minute * 2,
+			}),
 			queue: make(chan *rcmd, 10_000),
 		}
 
@@ -61,7 +61,7 @@ func (m *Cluster) AddMember(host string) {
 			m.members[host].done.Add(1)
 			go m.runner(
 				id,
-				m.members[host].pool,
+				m.members[host].client,
 				m.members[host].queue,
 				&m.members[host].done,
 			)
@@ -85,16 +85,16 @@ func (m *Cluster) AddMember(host string) {
 	}
 }
 
-func (m *Cluster) runner(id string, pool *redis.Pool, queue chan *rcmd, done *sync.WaitGroup) {
+func (m *Cluster) runner(id string, client *goredisv9.Client, queue chan *rcmd, done *sync.WaitGroup) {
 	defer func() { done.Done() }()
 	glog.Infof("runner %v started", id)
 	for j := range queue {
-		con := pool.Get()
 		j.runner = id
-		out, err := con.Do(j.cmd, j.args...)
+		args := []interface{}{j.cmd}
+		args = append(args, j.args...)
+		out, err := client.Do(context.Background(), args...).Result()
 		j.reply = out
 		j.done <- err
-		con.Close()
 	}
 }
 
@@ -133,7 +133,7 @@ func (m *Cluster) Close() {
 		glog.Infof("closing %v...", k)
 		close(v.queue)
 		v.done.Wait()
-		v.pool.Close()
+		v.client.Close()
 	}
 }
 

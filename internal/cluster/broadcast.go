@@ -12,7 +12,6 @@ import (
 	"github.com/alphauslabs/jupiter/internal/flags"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/golang/glog"
-	"github.com/gomodule/redigo/redis"
 )
 
 const (
@@ -106,17 +105,30 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 				}()
 
 				key := fmt.Sprintf("%v/%v", in.Name, idx)
-				v, err := redis.Bytes(cd.Cluster.Do(key, [][]byte{[]byte("GET"), []byte(key)}))
+				v, err := cd.Cluster.Do(key, [][]byte{[]byte("GET"), []byte(key)})
 				if err != nil {
+					e := fmt.Errorf("GET [%v] failed: %v", key, err)
+					glog.Error(e)
 					m.Lock()
-					me[idx] = fmt.Errorf("GET [%v] failed: %v", key, err)
+					me[idx] = e
 					m.Unlock()
 					return
 				}
 
-				m.Lock()
-				mb[idx] = v
-				m.Unlock()
+				switch v := v.(type) {
+				case []byte:
+					m.Lock()
+					mb[idx] = v
+					m.Unlock()
+				case string:
+					m.Lock()
+					mb[idx] = []byte(v)
+					m.Unlock()
+				case nil:
+					m.Lock()
+					mb[idx] = []byte("")
+					m.Unlock()
+				}
 			}(k)
 		}
 	}

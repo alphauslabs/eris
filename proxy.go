@@ -15,7 +15,6 @@ import (
 	"github.com/alphauslabs/jupiter/internal/cluster"
 	"github.com/flowerinthenight/hedge"
 	"github.com/golang/glog"
-	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
 	"github.com/tidwall/redcon"
 )
@@ -140,12 +139,40 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 		}
 	}(time.Now(), &line)
 
+	if len(cmd.Args) != 2 {
+		conn.WriteError("ERR invalid args")
+		return
+	}
+
 	ctx := context.Background()
 	key = string(cmd.Args[1])
 	keyLen := fmt.Sprintf("%v/len", key)
-	n, err := redis.Int(p.cluster.Do(key, [][]byte{[]byte("GET"), []byte(keyLen)}))
+	r, err := p.cluster.Do(key, [][]byte{[]byte("GET"), []byte(keyLen)})
 	if err != nil {
 		conn.WriteError("ERR " + err.Error())
+		return
+	}
+
+	var n int
+	switch r := r.(type) {
+	case int64:
+		x := int(r)
+		if int64(x) != r {
+			conn.WriteError("ERR " + strconv.ErrRange.Error())
+			return
+		}
+		n = x
+	case []byte:
+		t, err := strconv.ParseInt(string(r), 10, 0)
+		if err != nil {
+			conn.WriteError("ERR " + err.Error())
+			return
+		}
+		n = int(t)
+	}
+
+	if n == 0 {
+		conn.WriteError("ERR no data")
 		return
 	}
 
@@ -217,7 +244,6 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	for i := 0; i < n; i++ {
 		if _, ok := mb[i]; !ok {
 			m := fmt.Sprintf("index %v not found", i)
-			glog.Errorf("failed: %v", m)
 			conn.WriteError("ERR " + m)
 			return
 		}
