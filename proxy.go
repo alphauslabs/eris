@@ -95,6 +95,7 @@ func (p *proxy) Handler(conn redcon.Conn, cmd redcon.Command) {
 
 	v, err := p.cluster.Do(key, ncmd.Args)
 	if err != nil {
+		glog.Errorf("Handler.Do failed: %v: %v", key, err)
 		conn.WriteError(err.Error())
 	} else {
 		conn.WriteAny(v)
@@ -155,6 +156,20 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 
 	var n int
 	switch r := r.(type) {
+	case string:
+		i, err := strconv.ParseInt(r, 10, 0)
+		if err != nil {
+			conn.WriteError("ERR " + err.Error())
+			return
+		}
+		n = int(i)
+	case []byte:
+		i, err := strconv.ParseInt(string(r), 10, 0)
+		if err != nil {
+			conn.WriteError("ERR " + err.Error())
+			return
+		}
+		n = int(i)
 	case int64:
 		x := int(r)
 		if int64(x) != r {
@@ -162,13 +177,6 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 			return
 		}
 		n = x
-	case []byte:
-		t, err := strconv.ParseInt(string(r), 10, 0)
-		if err != nil {
-			conn.WriteError("ERR " + err.Error())
-			return
-		}
-		n = int(t)
 	default:
 		glog.Infof("%v: unsupported type: %v", keyLen, r)
 	}

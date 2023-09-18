@@ -93,10 +93,6 @@ func (m *Cluster) runner(id string, client *goredisv9.Client, queue chan *rcmd, 
 		args := []interface{}{j.cmd}
 		args = append(args, j.args...)
 		out, err := client.Do(context.Background(), args...).Result()
-		if err != nil {
-			glog.Errorf("Do failed: %v: %v", args, err)
-		}
-
 		j.reply = out
 		j.done <- err
 	}
