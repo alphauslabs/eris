@@ -98,7 +98,12 @@ func (p *proxy) Handler(conn redcon.Conn, cmd redcon.Command) {
 		glog.Errorf("cluster.Do failed: %v: %v", key, err)
 		conn.WriteError(err.Error())
 	} else {
-		glog.Infof("dbg: cluster.Do for %v", key)
+		args := []string{}
+		for _, a := range ncmd.Args {
+			args = append(args, string(a))
+		}
+
+		glog.Infof("dbg: cluster.Do for key=%v, args=%v, type=%T", key, args, v)
 		conn.WriteAny(v)
 	}
 }
