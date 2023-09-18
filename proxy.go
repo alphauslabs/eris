@@ -165,9 +165,8 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	}
 
 	ctx := context.Background()
-	key = string(cmd.Args[1])
-	keyLen := fmt.Sprintf("%v/len", key)
-	r, err := p.cluster.Do(key, [][]byte{[]byte("GET"), []byte(keyLen)})
+	keyLen := fmt.Sprintf("%v/len", string(cmd.Args[1]))
+	r, err := p.cluster.Do(keyLen, [][]byte{[]byte("GET"), []byte(keyLen)})
 	if err != nil {
 		conn.WriteError("ERR " + err.Error())
 		return
