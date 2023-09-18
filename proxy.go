@@ -169,9 +169,12 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 			return
 		}
 		n = int(t)
+	default:
+		glog.Infof("%v: unsupported type: %v", keyLen, r)
 	}
 
 	if n == 0 {
+		glog.Errorf("failed: %v: n=0, no data", keyLen)
 		conn.WriteError("ERR no data")
 		return
 	}
