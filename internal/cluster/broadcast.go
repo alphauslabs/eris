@@ -116,17 +116,19 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 				}
 
 				switch v := v.(type) {
-				case []byte:
-					m.Lock()
-					mb[idx] = v
-					m.Unlock()
 				case string:
 					m.Lock()
 					mb[idx] = []byte(v)
 					m.Unlock()
-				case nil:
+				case []byte:
 					m.Lock()
-					mb[idx] = []byte("")
+					mb[idx] = v
+					m.Unlock()
+				default:
+					e := fmt.Errorf("unknown type for [%v]: %T", key, v)
+					glog.Error(e)
+					m.Lock()
+					me[idx] = e
 					m.Unlock()
 				}
 			}(k)

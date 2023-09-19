@@ -58,12 +58,12 @@ func (p *proxy) Handler(conn redcon.Conn, cmd redcon.Command) {
 		case strings.HasPrefix(last, "index="):
 			i, err := strconv.Atoi(strings.Split(last, "=")[1])
 			if err != nil {
-				conn.WriteError("ERR [" + err.Error() + "]")
+				conn.WriteError("ERR " + err.Error())
 				return
 			}
 
 			if i == 0 || i >= (len(ncmd.Args)-1) {
-				conn.WriteError("ERR " + fmt.Sprintf("[invalid index %d]", i))
+				conn.WriteError("ERR " + fmt.Sprintf("invalid index [%d]", i))
 				return
 			}
 
@@ -95,10 +95,13 @@ func (p *proxy) Handler(conn redcon.Conn, cmd redcon.Command) {
 
 	v, err := p.cluster.Do(key, ncmd.Args)
 	if err != nil {
+		// Already have the 'ERR ' prefix.
 		conn.WriteError(err.Error())
-	} else {
-		conn.WriteAny(v)
+		return
 	}
+
+	// Write as is.
+	conn.WriteAny(v)
 }
 
 func newProxy(app *appdata.AppData, c *cluster.Cluster) *proxy {
@@ -110,7 +113,7 @@ func pingCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	case key != "":
 		v, err := p.cluster.Do(key, cmd.Args)
 		if err != nil {
-			conn.WriteError(err.Error())
+			conn.WriteError("ERR " + err.Error())
 		} else {
 			conn.WriteAny(v)
 		}
@@ -179,7 +182,7 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	}
 
 	if n == 0 {
-		conn.WriteError("ERR no data")
+		conn.WriteError("ERR no chunks found")
 		return
 	}
 
@@ -249,7 +252,7 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	var out bytes.Buffer
 	for i := 0; i < n; i++ {
 		if _, ok := mb[i]; !ok {
-			m := fmt.Sprintf("index %v not found", i)
+			m := fmt.Sprintf("index [%v] not found", i)
 			conn.WriteError("ERR " + m)
 			return
 		}
