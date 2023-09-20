@@ -107,7 +107,11 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 	switch v.(type) {
 	case []interface{}:
 		for i, d := range v.([]interface{}) {
-			mb[mgetIds[i]] = []byte(d.(string))
+			if _, ok := d.(string); !ok {
+				mb[mgetIds[i]] = []byte("")
+			} else {
+				mb[mgetIds[i]] = []byte(d.(string))
+			}
 		}
 	default:
 		e := fmt.Errorf("unknown type for [%v:%v]: %T", in.Name, strings.Join(ids, ","), v)
