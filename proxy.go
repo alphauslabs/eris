@@ -156,8 +156,6 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 		return
 	}
 
-	glog.Infof("dbg: lenType=%T", r) // TODO: remove, include case below
-
 	var n int
 	switch r := r.(type) {
 	case string:
@@ -167,20 +165,10 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 			return
 		}
 		n = int(i)
-	case []byte:
-		i, err := strconv.ParseInt(string(r), 10, 0)
-		if err != nil {
-			conn.WriteError("ERR " + err.Error())
-			return
-		}
-		n = int(i)
-	case int64:
-		x := int(r)
-		if int64(x) != r {
-			conn.WriteError("ERR " + strconv.ErrRange.Error())
-			return
-		}
-		n = x
+	default:
+		e := fmt.Errorf("unknown type %T for /len", r)
+		conn.WriteError("ERR " + e.Error())
+		return
 	}
 
 	if n == 0 {
