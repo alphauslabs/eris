@@ -108,7 +108,9 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 	case []interface{}:
 		for i, d := range v.([]interface{}) {
 			if _, ok := d.(string); !ok {
-				mb[mgetIds[i]] = []byte("")
+				e := fmt.Errorf("unexpected non-string value for [%v:%v]", in.Name, mgetIds[i])
+				glog.Error(e)
+				return nil, e
 			} else {
 				mb[mgetIds[i]] = []byte(d.(string))
 			}
