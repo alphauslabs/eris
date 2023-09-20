@@ -107,9 +107,15 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 
 	switch v.(type) {
 	case []interface{}:
+		glog.Infof("dbg: outlen=%v, idslen=%v", len(v.([]interface{})), len(mgetIds))
 		for i, d := range v.([]interface{}) {
 			if _, ok := d.(string); !ok {
-				e := fmt.Errorf("unexpected non-string value for %v, type=%T", in.Name, d)
+				id := -1
+				if i < len(mgetIds) {
+					id = i
+				}
+
+				e := fmt.Errorf("unexpected non-string value for [%v:%v], type=%T", in.Name, id, d)
 				glog.Error(e)
 				return nil, e
 			} else {
