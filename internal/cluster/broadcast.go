@@ -3,13 +3,10 @@ package cluster
 import (
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/alphauslabs/jupiter/internal/flags"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/golang/glog"
 )
@@ -87,73 +84,39 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 		return nil, err
 	}
 
-	var assigned int32
-	var w sync.WaitGroup
-	var m sync.Mutex
+	mgetIds := []int{}
+	mgets := [][]byte{[]byte("MGET")}
 	mb := make(map[int][]byte)
-	me := make(map[int]error)
-	concurrent := make(chan struct{}, *flags.MaxActive) // concurrent read limit
 	for k, v := range in.Assign {
 		if v == cd.App.FleetOp.Name() {
-			atomic.AddInt32(&assigned, 1)
-			w.Add(1)
-			go func(idx int) {
-				concurrent <- struct{}{}
-				defer func() {
-					<-concurrent
-					w.Done()
-				}()
-
-				key := fmt.Sprintf("%v/%v", in.Name, idx)
-				v, err := cd.Cluster.Do(key, [][]byte{[]byte("GET"), []byte(key)})
-				if err != nil {
-					e := fmt.Errorf("GET [%v] failed: %v", key, err)
-					glog.Error(e)
-					m.Lock()
-					me[idx] = e
-					m.Unlock()
-					return
-				}
-
-				switch v := v.(type) {
-				case string:
-					m.Lock()
-					mb[idx] = []byte(v)
-					m.Unlock()
-				case []byte:
-					m.Lock()
-					mb[idx] = v
-					m.Unlock()
-				default:
-					e := fmt.Errorf("unknown type for [%v]: %T", key, v)
-					glog.Error(e)
-					m.Lock()
-					me[idx] = e
-					m.Unlock()
-				}
-			}(k)
+			mgetIds = append(mgetIds, k)
+			mgets = append(mgets, []byte(fmt.Sprintf("%v/%v", in.Name, k)))
 		}
 	}
 
-	if atomic.LoadInt32(&assigned) > 0 {
-		w.Wait()
-		for _, v := range me {
-			if v != nil {
-				return nil, v
-			}
-		}
-
-		ids := []string{}
-		for k := range mb {
-			ids = append(ids, fmt.Sprintf("%v", k))
-		}
-
-		sort.Strings(ids)
-		line = fmt.Sprintf("%v/%v:[%v]", in.Name, len(ids), strings.Join(ids, ","))
-		out := DistributedGetOutput{Data: mb}
-		b, _ := json.Marshal(out)
-		return b, nil
+	v, err := cd.Cluster.Do(in.Name, mgets)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, nil
+	ids := []string{}
+	for _, id := range mgetIds {
+		ids = append(ids, fmt.Sprintf("%v", id))
+	}
+
+	switch v.(type) {
+	case []interface{}:
+		for i, d := range v.([]interface{}) {
+			mb[mgetIds[i]] = []byte(d.(string))
+		}
+	default:
+		e := fmt.Errorf("unknown type for [%v:%v]: %T", in.Name, strings.Join(ids, ","), v)
+		glog.Error(e)
+		return nil, e
+	}
+
+	line = fmt.Sprintf("%v:len=%v:[%v]", in.Name, len(ids), strings.Join(ids, ","))
+	out := DistributedGetOutput{Data: mb}
+	b, _ := json.Marshal(out)
+	return b, nil
 }

@@ -148,13 +148,15 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	}
 
 	ctx := context.Background()
-	nkey := string(cmd.Args[1]) // 'key' arg not used here
-	keyLen := fmt.Sprintf("%v/len", nkey)
+	nkey := string(cmd.Args[1])           // 'key' arg not used here
+	keyLen := fmt.Sprintf("%v/len", nkey) // no hash={key} used for '/len'
 	r, err := p.cluster.Do(keyLen, [][]byte{[]byte("GET"), []byte(keyLen)})
 	if err != nil {
 		conn.WriteError("ERR " + err.Error())
 		return
 	}
+
+	glog.Infof("dbg: lenType=%T", r) // TODO: remove, include case below
 
 	var n int
 	switch r := r.(type) {
@@ -245,6 +247,7 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	}
 
 	if len(errs) > 0 {
+		glog.Errorf("failed: no cache: %v", errs)
 		conn.WriteError("ERR no cache")
 		return
 	}
