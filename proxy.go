@@ -235,8 +235,7 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	}
 
 	if len(errs) > 0 {
-		glog.Errorf("failed: no cache: %v", errs)
-		conn.WriteError("ERR no cache")
+		conn.WriteError("ERR incomplete cache data")
 		return
 	}
 

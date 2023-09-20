@@ -94,6 +94,7 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 		}
 	}
 
+	mgets = append(mgets, []byte(fmt.Sprintf("hash=%v", in.Name)))
 	v, err := cd.Cluster.Do(in.Name, mgets)
 	if err != nil {
 		return nil, err
