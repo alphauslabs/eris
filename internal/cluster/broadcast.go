@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/golang/glog"
@@ -35,6 +36,15 @@ var (
 		CtrlBroadcastLeaderLiveness: doBroadcastLeaderLiveness,
 		CtrlBroadcastEmpty:          doBroadcastEmpty,
 		CtrlBroadcastDistributedGet: doDistributedGet,
+	}
+
+	stringToBytes = func(s string) []byte {
+		return *(*[]byte)(unsafe.Pointer(
+			&struct {
+				string
+				int
+			}{s, len(s)},
+		))
 	}
 )
 
@@ -84,6 +94,7 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 		return nil, err
 	}
 
+	ids := []string{}
 	mgetIds := []int{}
 	mgets := [][]byte{[]byte("MGET")}
 	mb := make(map[int][]byte)
@@ -94,31 +105,32 @@ func doDistributedGet(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 		}
 	}
 
-	v, err := cd.Cluster.Do(in.Name, mgets)
-	if err != nil {
-		return nil, err
-	}
-
-	ids := []string{}
-	for _, id := range mgetIds {
-		ids = append(ids, fmt.Sprintf("%v", id))
-	}
-
-	switch v.(type) {
-	case []interface{}:
-		for i, d := range v.([]interface{}) {
-			if _, ok := d.(string); !ok {
-				e := fmt.Errorf("unexpected non-string type for %v/%v, type=%T", in.Name, mgetIds[i], d)
-				glog.Error(e)
-				return nil, e
-			} else {
-				mb[mgetIds[i]] = []byte(d.(string))
-			}
+	if len(mgetIds) > 0 {
+		v, err := cd.Cluster.Do(in.Name, mgets)
+		if err != nil {
+			return nil, err
 		}
-	default:
-		e := fmt.Errorf("unknown type for [%v:%v]: %T", in.Name, strings.Join(ids, ","), v)
-		glog.Error(e)
-		return nil, e
+
+		for _, id := range mgetIds {
+			ids = append(ids, fmt.Sprintf("%v", id))
+		}
+
+		switch v.(type) {
+		case []interface{}:
+			for i, d := range v.([]interface{}) {
+				if _, ok := d.(string); !ok {
+					e := fmt.Errorf("unexpected non-string type for %v/%v, type=%T", in.Name, mgetIds[i], d)
+					glog.Error(e)
+					return nil, e
+				} else {
+					mb[mgetIds[i]] = stringToBytes(d.(string))
+				}
+			}
+		default:
+			e := fmt.Errorf("unknown type for [%v:%v]: %T", in.Name, strings.Join(ids, ","), v)
+			glog.Error(e)
+			return nil, e
+		}
 	}
 
 	line = fmt.Sprintf("%v:assigned=%v:[%v]", in.Name, len(ids), strings.Join(ids, ","))
