@@ -3,11 +3,11 @@ module github.com/alphauslabs/jupiter
 go 1.21.0
 
 require (
-	cloud.google.com/go/spanner v1.49.0
+	cloud.google.com/go/spanner v1.50.0
 	github.com/buraksezer/consistent v0.10.0
 	github.com/cespare/xxhash v1.1.0
 	github.com/cloudevents/sdk-go/v2 v2.14.0
-	github.com/flowerinthenight/hedge v1.10.11
+	github.com/flowerinthenight/hedge v1.11.0
 	github.com/flowerinthenight/timedoff v1.0.1
 	github.com/golang/glog v1.1.2
 	github.com/google/uuid v1.3.1
@@ -68,7 +68,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.143.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto v0.0.0-20230920204549-e6e6cdab5c13 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20230920204549-e6e6cdab5c13 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230920204549-e6e6cdab5c13 // indirect
+	google.golang.org/genproto v0.0.0-20231002182017-d307bd883b97 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20231002182017-d307bd883b97 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20231002182017-d307bd883b97 // indirect
 )
