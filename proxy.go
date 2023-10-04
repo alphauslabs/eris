@@ -23,7 +23,7 @@ var (
 	items = make(map[string][]byte)
 	ps    redcon.PubSub
 
-	cmds = map[string]func(redcon.Conn, redcon.Command, string, *proxy){
+	cmds = map[string]func(redcon.Conn, redcon.Command, metaT){
 		"ping":    pingCmd,
 		"distget": distGetCmd,
 		"detach":  detachCmd,
@@ -32,27 +32,43 @@ var (
 	}
 )
 
+type metaT struct {
+	this   *proxy // required
+	key    string // optional
+	chunks int    // optional, used in DISTGET
+}
+
 type proxy struct {
 	app     *appdata.AppData
 	cluster *cluster.Cluster
 }
 
-// Special: optional last args fmt: hash={key}|index={num}
+// Special: optional last args fmt: hash={key}[,len=n]|index={num}
 // where:
 //
 //	{key} = string combination (chars not allowed: ,=)
+//	n     = if provided, use as len instead of querying 'key/len'
+//	        (for now, used in DISTGET)
 //	{num} = 0-based index in args to use as hash key
 //
 // If this custom args is not provided, args[1] will be used.
 func (p *proxy) Handler(conn redcon.Conn, cmd redcon.Command) {
 	ncmd := cmd
 	var key string
+	var chunks int
 	if len(ncmd.Args) >= 2 {
 		var custom bool
 		last := string(ncmd.Args[len(ncmd.Args)-1])
 		switch {
 		case strings.HasPrefix(last, "hash="):
-			key = strings.Split(last, "=")[1]
+			ll := strings.Split(last, ",")
+			if len(ll) > 1 { // see if len=n is provided
+				if strings.HasPrefix(ll[1], "len=") {
+					chunks, _ = strconv.Atoi(strings.Split(ll[1], "=")[1])
+				}
+			}
+
+			key = strings.Split(ll[0], "=")[1]
 			custom = true
 		case strings.HasPrefix(last, "index="):
 			i, err := strconv.Atoi(strings.Split(last, "=")[1])
@@ -80,7 +96,8 @@ func (p *proxy) Handler(conn redcon.Conn, cmd redcon.Command) {
 
 	cmdtl := strings.ToLower(string(ncmd.Args[0]))
 	if _, found := cmds[cmdtl]; found {
-		cmds[cmdtl](conn, ncmd, key, p)
+		meta := metaT{this: p, key: key, chunks: chunks}
+		cmds[cmdtl](conn, ncmd, meta)
 		return
 	}
 
@@ -107,10 +124,10 @@ func newProxy(app *appdata.AppData, c *cluster.Cluster) *proxy {
 	return &proxy{app: app, cluster: c}
 }
 
-func pingCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
+func pingCmd(conn redcon.Conn, cmd redcon.Command, meta metaT) {
 	switch {
-	case key != "":
-		v, err := p.cluster.Do(key, cmd.Args)
+	case meta.key != "":
+		v, err := meta.this.cluster.Do(meta.key, cmd.Args)
 		if err != nil {
 			conn.WriteError("ERR " + err.Error())
 		} else {
@@ -133,7 +150,7 @@ func pingCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 // this as MIGs in GCP, that could be a slightly more stable environment for this
 // kind of load distribution. At the moment, the HPA for this deployment is set
 // with min = max, so at least the scale up/down is relatively fixed.
-func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
+func distGetCmd(conn redcon.Conn, cmd redcon.Command, meta metaT) {
 	var line string
 	defer func(begin time.Time, m *string) {
 		if *m != "" {
@@ -147,36 +164,38 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	}
 
 	ctx := context.Background()
-	nkey := string(cmd.Args[1])           // 'key' arg not used here
-	keyLen := fmt.Sprintf("%v/len", nkey) // no hash={key} used for '/len'
-	r, err := p.cluster.Do(keyLen, [][]byte{[]byte("GET"), []byte(keyLen)})
-	if err != nil {
-		conn.WriteError("ERR " + err.Error())
-		return
-	}
-
-	var n int
-	switch r := r.(type) {
-	case string:
-		i, err := strconv.ParseInt(r, 10, 0)
+	nkey := string(cmd.Args[1]) // 'key' arg not used here
+	chunks := meta.chunks
+	if chunks == 0 { // try getting it ourselves
+		keyLen := fmt.Sprintf("%v/len", nkey) // no hash={key} used for '/len'
+		r, err := meta.this.cluster.Do(keyLen, [][]byte{[]byte("GET"), []byte(keyLen)})
 		if err != nil {
 			conn.WriteError("ERR " + err.Error())
 			return
 		}
-		n = int(i)
-	default:
-		e := fmt.Errorf("unknown type %T for /len", r)
-		conn.WriteError("ERR " + e.Error())
-		return
+
+		switch r := r.(type) {
+		case string:
+			i, err := strconv.ParseInt(r, 10, 0)
+			if err != nil {
+				conn.WriteError("ERR " + err.Error())
+				return
+			}
+			chunks = int(i)
+		default:
+			e := fmt.Errorf("unknown type %T for /len", r)
+			conn.WriteError("ERR " + e.Error())
+			return
+		}
 	}
 
-	if n == 0 {
+	if chunks == 0 { // if still none
 		conn.WriteError("ERR no chunks found")
 		return
 	}
 
 	members := make(map[string]string)
-	for _, m := range p.app.FleetOp.Members() {
+	for _, m := range meta.this.app.FleetOp.Members() {
 		members[m] = m
 	}
 
@@ -188,7 +207,7 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	// Assign query indeces to all members.
 	loc := 0
 	assign := make(map[int]string)
-	for i := 0; i < n; i++ {
+	for i := 0; i < chunks; i++ {
 		assign[i] = nodes[loc]
 		loc++
 		if loc >= len(members) {
@@ -206,7 +225,7 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 
 	// Send out GET assignments to all members; wait for reply.
 	// TODO: How to handle any member failing? For now, fail all.
-	outs := p.app.FleetOp.Broadcast(ctx, b)
+	outs := meta.this.app.FleetOp.Broadcast(ctx, b)
 	for _, out := range outs {
 		members[out.Id] = out.Id
 		if out.Error != nil {
@@ -230,7 +249,7 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	}
 
 	var out bytes.Buffer
-	for i := 0; i < n; i++ {
+	for i := 0; i < chunks; i++ {
 		if _, ok := mb[i]; !ok {
 			m := fmt.Sprintf("index [%v] not found", i)
 			conn.WriteError("ERR " + m)
@@ -241,12 +260,12 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	}
 
 	line = fmt.Sprintf("key=%v, chunks=%v, len=%v, cap=%v",
-		nkey, n, out.Len(), out.Cap())
+		nkey, chunks, out.Len(), out.Cap())
 
 	conn.WriteAny(out.Bytes())
 }
 
-func detachCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
+func detachCmd(conn redcon.Conn, cmd redcon.Command, meta metaT) {
 	hconn := conn.Detach()
 	glog.Info("connection has been detached")
 	go func() {
@@ -256,12 +275,12 @@ func detachCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 	}()
 }
 
-func quitCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
+func quitCmd(conn redcon.Conn, cmd redcon.Command, meta metaT) {
 	conn.WriteString("OK")
 	conn.Close()
 }
 
-func configCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
+func configCmd(conn redcon.Conn, cmd redcon.Command, meta metaT) {
 	// This simple (blank) response is only here to allow for the
 	// redis-benchmark command to work with this clone.
 	conn.WriteArray(2)
