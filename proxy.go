@@ -13,7 +13,6 @@ import (
 	"github.com/alphauslabs/jupiter/internal"
 	"github.com/alphauslabs/jupiter/internal/appdata"
 	"github.com/alphauslabs/jupiter/internal/cluster"
-	"github.com/flowerinthenight/hedge"
 	"github.com/golang/glog"
 	"github.com/google/uuid"
 	"github.com/tidwall/redcon"
@@ -176,18 +175,9 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 		return
 	}
 
-	// TODO: Expose member list in hedge.
-	// For now, get all members in the cluster via empty broadcast.
 	members := make(map[string]string)
-	b, _ := json.Marshal(internal.NewEvent(
-		hedge.KeyValue{}, // dummy
-		cluster.EventSource,
-		cluster.CtrlBroadcastEmpty,
-	))
-
-	outs := p.app.FleetOp.Broadcast(ctx, b)
-	for _, out := range outs {
-		members[out.Id] = out.Id
+	for _, m := range p.app.FleetOp.Members() {
+		members[m] = m
 	}
 
 	var nodes []string
@@ -208,7 +198,7 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 
 	mb := make(map[int][]byte)
 	errs := []error{}
-	b, _ = json.Marshal(internal.NewEvent(
+	b, _ := json.Marshal(internal.NewEvent(
 		cluster.DistributedGetInput{Name: nkey, Assign: assign},
 		cluster.EventSource,
 		cluster.CtrlBroadcastDistributedGet,
@@ -216,7 +206,7 @@ func distGetCmd(conn redcon.Conn, cmd redcon.Command, key string, p *proxy) {
 
 	// Send out GET assignments to all members; wait for reply.
 	// TODO: How to handle any member failing? For now, fail all.
-	outs = p.app.FleetOp.Broadcast(ctx, b)
+	outs := p.app.FleetOp.Broadcast(ctx, b)
 	for _, out := range outs {
 		members[out.Id] = out.Id
 		if out.Error != nil {

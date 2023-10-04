@@ -29,12 +29,10 @@ var (
 	ErrClusterOffline = fmt.Errorf("failed: cluster not running")
 
 	CtrlBroadcastLeaderLiveness = "CTRL_BROADCAST_LEADER_LIVENESS"
-	CtrlBroadcastEmpty          = "CTRL_BROADCAST_EMPTY"
 	CtrlBroadcastDistributedGet = "CTRL_BROADCAST_DISTRIBUTED_GET"
 
 	fnBroadcast = map[string]func(*ClusterData, *cloudevents.Event) ([]byte, error){
 		CtrlBroadcastLeaderLiveness: doBroadcastLeaderLiveness,
-		CtrlBroadcastEmpty:          doBroadcastEmpty,
 		CtrlBroadcastDistributedGet: doDistributedGet,
 	}
 
@@ -70,12 +68,6 @@ func BroadcastHandler(data interface{}, msg []byte) ([]byte, error) {
 
 func doBroadcastLeaderLiveness(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 	cd.App.LeaderActive.On()
-	return nil, nil
-}
-
-// doBroadcastEmpty does nothing, actually. At the moment, used to gather all member info.
-// TODO: It's better if hedge exposes the member list function instead of this.
-func doBroadcastEmpty(cd *ClusterData, e *cloudevents.Event) ([]byte, error) {
 	return nil, nil
 }
 
