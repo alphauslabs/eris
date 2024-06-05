@@ -83,7 +83,7 @@ $ redis-cli
 
 ### Use case(s)
 
-At the moment, our [TrueUnblended Engine](https://labs.alphaus.cloud/docs/ripple/trueunblended/) and some of our [streaming APIs](https://labs.alphaus.cloud/blueapidocs/#/Cost) use `jupiter` to cache graph and reports data into multiple chunks (64KB by default) which are distributed across its cluster. `jupiter` exposes a [filesystem-like API](https://github.com/mobingilabs/ouchan/tree/master/pkg/jupiter) that clients can use to read and write files (or data blobs) to a cluster. Each data will have a name (filename) and once written, its data chunks will be distributed across the cluster. During retrieval, `jupiter` handles the assembly of all data chunks from the cluster and returns it to the caller as a single file (blob). Something like:
+At the moment, our [Project Sapphire](https://internal-docs-dev.alphaus.cloud/ripple/trueunblended-engine/) ([public doc](https://labs.alphaus.cloud/docs/ripple/trueunblended/)) and some of our [streaming APIs](https://labs.alphaus.cloud/blueapidocs/#/Cost) use `jupiter` to cache graph and reports data into multiple chunks (64KB by default) which are distributed across its cluster. `jupiter` exposes a [filesystem-like API](https://github.com/mobingilabs/ouchan/tree/master/pkg/jupiter) that clients can use to read and write files (or data blobs) to a cluster. Each data will have a name (filename) and once written, its data chunks will be distributed across the cluster. During retrieval, `jupiter` handles the assembly of all data chunks from the cluster and returns it to the caller as a single file (blob). Something like:
 
 ```go
 err := jupiter.WriteAll("file1", []byte("data bigger than 64KB"))
