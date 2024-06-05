@@ -4,6 +4,11 @@
 
 There is a slight performance penalty over direct connections to Redis due to its use of hashing; it requires all commands to have a key as hash to find the corresponding Redis node. If you require high performance caching, you're probably better off using a dedicated Redis node/cluster.
 
+<p align="center">
+  <img src="./assets/jupiter.png" width="560" title="hedge">
+</p>
+
+
 ### Why
 
 The main reason why `jupiter` exists is that at the time of this writing, the maximum Memorystore instance available in GCP is 300GB. Beyond this, we need to create more instances. Instead of leaving the responsibility of accessing multiple Memorystore instances to our applications, it's more convenient to be able to access these clusters of instances as a single entity. After a trial run with [Envoy Redis proxy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_protocols/redis), we wanted something more, especially the ability to add/remove instances seamlessly with minimal interruptions to our client applications. [Redis Ring](https://redis.uptrace.dev/guide/ring.html) was also considered but we wanted more control and flexibility on the control plane side.
