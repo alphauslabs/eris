@@ -95,7 +95,7 @@ func main() {
 	// Setup our group coordinator.
 	app.FleetOp = hedge.New(
 		app.Client,
-		":8081",
+		":8081", // grpc will be on 8082
 		*flags.LockTable,
 		*flags.LockName,
 		*flags.LogTable,
@@ -177,7 +177,7 @@ func main() {
 
 	// Interrupt handler.
 	go func() {
-		sigch := make(chan os.Signal)
+		sigch := make(chan os.Signal, 1)
 		signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
 		glog.Infof("signal: %v", <-sigch)
 		cancel()
