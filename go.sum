@@ -708,8 +708,8 @@ github.com/envoyproxy/protoc-gen-validate v1.0.4 h1:gVPz/FMfvh57HdSJQyvBtF00j8JU
 github.com/envoyproxy/protoc-gen-validate v1.0.4/go.mod h1:qys6tmnRsYrQqIhm2bvKZH4Blx/1gTIZ2UKVY1M+Yew=
 github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
-github.com/flowerinthenight/hedge v1.14.0 h1:p2o0K9HFq15BudkNXZy8q3ubbZUnQKwOLNkEvanZDkM=
-github.com/flowerinthenight/hedge v1.14.0/go.mod h1:YNozGztjcVjWK9VXusCmWF1Iwy+DVFbihiIe7iRQ8/k=
+github.com/flowerinthenight/hedge v1.14.1 h1:JQi8jF+hLsMjxrjIfrZ4OxcD7JXfkxPL9PPLH1ZMROQ=
+github.com/flowerinthenight/hedge v1.14.1/go.mod h1:R6n2YV4myhOXoV4t2ddQd0R61uOEU8Q0wPtG68x8pnc=
 github.com/flowerinthenight/spindle v1.2.4 h1:iCPgJBYaGSQslatOrjgxlpfjwOrkzqeW/RQ7WhH1RO4=
 github.com/flowerinthenight/spindle v1.2.4/go.mod h1:CWJ1dvx+OhHQPvrijeej8y3N+2PpRvwsZ8O0QAE3yFM=
 github.com/flowerinthenight/timedoff v1.0.2 h1:DVy87s1xVDOU/0J9Up6T8HufeHUrggGiXcMycOwN4ys=

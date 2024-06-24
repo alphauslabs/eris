@@ -7,7 +7,7 @@ require (
 	github.com/buraksezer/consistent v0.10.0
 	github.com/cespare/xxhash v1.1.0
 	github.com/cloudevents/sdk-go/v2 v2.15.2
-	github.com/flowerinthenight/hedge v1.14.0
+	github.com/flowerinthenight/hedge v1.14.1
 	github.com/flowerinthenight/timedoff v1.0.2
 	github.com/golang/glog v1.2.1
 	github.com/google/uuid v1.6.0
