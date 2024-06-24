@@ -59,7 +59,7 @@ _, err := jupiter.Client().Set(ctx, "key", "value", time.Second*10).Result()
 if err != nil {
     // failed
 } else {
-    // success
+    // ok
 }
 ```
 
@@ -85,9 +85,9 @@ con := pool.Get()
 defer con.Close()
 v, err := redis.String(con.Do("PING", hashKey))
 if err != nil {
-    log.Printf("PING failed: %v", err)
+    // failed
 } else {
-    log.Printf("reply=%v", v)
+    // ok
 }
 ```
 
