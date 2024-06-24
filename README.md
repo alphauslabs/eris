@@ -43,6 +43,27 @@ Finally, `jupiter` will use a random hash key if none is detected/provided. For 
 
 ### Usage
 
+Using `go-redis` (recommended):
+
+```go
+// You can use the `jupiter` package in ouchan:
+import (
+    ...
+    "github.com/mobingilabs/ouchan/pkg/jupiter"
+)
+
+ctx := context.Background()
+key, val := "somekey", "somevalue"
+_, err := jupiter.Client().Set(ctx, key, value, time.Second*10).Result()
+if err != nil {
+    // failed
+} else {
+    // success
+}
+```
+
+Using `redigo`:
+
 ```go
 import (
     ...
@@ -83,23 +104,6 @@ $ redis-cli
 127.0.0.1:6379> PING hash=somekey
 "PONG"
 127.0.0.1:6379> quit
-```
-
-### Use case(s)
-
-At the moment, our [Project Sapphire](https://internal-docs-dev.alphaus.cloud/ripple/trueunblended-engine/) ([public doc](https://labs.alphaus.cloud/docs/ripple/trueunblended/)) and some of our [streaming APIs](https://labs.alphaus.cloud/blueapidocs/#/Cost) use `jupiter` to cache graph and reports data into multiple chunks (64KB by default) which are distributed across its cluster. `jupiter` exposes a [filesystem-like API](https://github.com/mobingilabs/ouchan/tree/master/pkg/jupiter) that clients can use to read and write files (or data blobs) to a cluster. Each data will have a name (filename) and once written, its data chunks will be distributed across the cluster. During retrieval, `jupiter` handles the assembly of all data chunks from the cluster and returns it to the caller as a single file (blob). Something like:
-
-```go
-err := jupiter.WriteAll("file1", []byte("data bigger than 64KB"))
-if err != nil {
-    return
-}
-...
-b, err := jupiter.ReadAll("file1")
-if err != nil {
-    return
-}
-// do something with b
 ```
 
 ### Limitations
