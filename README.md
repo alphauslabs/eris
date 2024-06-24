@@ -55,8 +55,7 @@ import (
 jupiter.Init()
 ...
 ctx := context.Background()
-key, val := "somekey", "somevalue"
-_, err := jupiter.Client().Set(ctx, key, value, time.Second*10).Result()
+_, err := jupiter.Client().Set(ctx, "key", "value", time.Second*10).Result()
 if err != nil {
     // failed
 } else {
