@@ -85,9 +85,9 @@ con := pool.Get()
 defer con.Close()
 v, err := redis.String(con.Do("PING", hashKey))
 if err != nil {
-    // failed
+    log.Printf("PING failed: %v", err)
 } else {
-    // ok
+    log.Printf("reply=%v", v)
 }
 ```
 
