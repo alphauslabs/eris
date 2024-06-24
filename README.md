@@ -43,7 +43,7 @@ Finally, `jupiter` will use a random hash key if none is detected/provided. For 
 
 ### Usage
 
-Using `go-redis` (recommended):
+Using [`go-redis`](https://github.com/redis/go-redis) (recommended):
 
 ```go
 // You can use the `jupiter` package in ouchan:
@@ -62,7 +62,7 @@ if err != nil {
 }
 ```
 
-Using `redigo`:
+Using [`redigo`](https://github.com/gomodule/redigo):
 
 ```go
 import (
