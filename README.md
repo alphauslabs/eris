@@ -52,6 +52,8 @@ import (
     "github.com/mobingilabs/ouchan/pkg/jupiter"
 )
 
+jupiter.Init()
+...
 ctx := context.Background()
 key, val := "somekey", "somevalue"
 _, err := jupiter.Client().Set(ctx, key, value, time.Second*10).Result()
