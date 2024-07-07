@@ -7,7 +7,7 @@ require (
 	github.com/buraksezer/consistent v0.10.0
 	github.com/cespare/xxhash v1.1.0
 	github.com/cloudevents/sdk-go/v2 v2.15.2
-	github.com/flowerinthenight/hedge v1.15.14
+	github.com/flowerinthenight/hedge v1.15.15
 	github.com/flowerinthenight/timedoff v1.0.2
 	github.com/golang/glog v1.2.1
 	github.com/google/uuid v1.6.0
@@ -34,7 +34,7 @@ require (
 	github.com/envoyproxy/go-control-plane v0.12.0 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.0.4 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/flowerinthenight/spindle v1.2.5 // indirect
+	github.com/flowerinthenight/spindle v1.2.6 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
