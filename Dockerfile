@@ -1,4 +1,4 @@
-FROM golang:1.22.4-bookworm
+FROM golang:1.22.5-bookworm
 COPY . /go/src/github.com/alphauslabs/jupiter/
 WORKDIR /go/src/github.com/alphauslabs/jupiter/
 RUN CGO_ENABLED=0 GOOS=linux go build -v -trimpath -installsuffix cgo -o jupiter .
